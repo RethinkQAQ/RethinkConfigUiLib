@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "${modId}",
+  "version": "${modVersion}",
+  "name": "${modName}",
+  "description": "${modDescription}",
+  "authors": ["${modAuthor}"],
+  "contact": {
+    "sources": "https://github.com/${modGitHub}",
+    "issues": "https://github.com/${modGitHub}/issues"
+  },
+  "license": "${modLicense}",
+  "environment": "client",
+  "entrypoints": { "client": ["com.rethinkqaq.configui.fabric.RethinkConfigUiLibFabric"] },
+  "mixins": ["rethink_config_ui_lib.fabric.mixins.json"],
+  "depends": {
+    "fabricloader": ">=${fabricLoaderMinVersion}",
+    "minecraft": "${minecraftVersionRangeFabric}",
+    "java": ">=${javaVersion}"
+  }
+}

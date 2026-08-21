@@ -1,0 +1,133 @@
+name: Reusable Minecraft build
+
+on:
+  workflow_call:
+    outputs:
+      artifact_name:
+        value: ${{ jobs.build.outputs.artifact_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.version.outputs.artifact_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Set build version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "BUILD_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+            echo "BUILD_SUFFIX=" >> "$GITHUB_ENV"
+          else
+            echo "BUILD_VERSION=$(grep '^mod.version=' gradle.properties | cut -d= -f2-)" >> "$GITHUB_ENV"
+            echo "BUILD_SUFFIX=build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          fi
+          echo "artifact_name=mod-jars-staging" >> "$GITHUB_OUTPUT"
+
+      - name: Validate version metadata
+        run: ./gradlew validateVersionProperties --no-daemon --stacktrace
+
+      - name: Check license headers
+        run: ./gradlew licenseCheck --no-daemon --stacktrace
+
+      - name: Build all enabled targets
+        run: >-
+          ./gradlew build
+          -Pmod.version="$BUILD_VERSION"
+          -Pbuild.number="$BUILD_SUFFIX"
+          --parallel --build-cache --no-daemon --stacktrace
+
+      - name: Collect jars
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import shutil
+          from pathlib import Path
+
+          def properties(path):
+              result = {}
+              for line in path.read_text(encoding='utf-8').splitlines():
+                  line = line.strip()
+                  if line and not line.startswith('#') and '=' in line:
+                      key, value = line.split('=', 1)
+                      result[key.strip()] = value.strip()
+              return result
+
+          staging = Path('artifacts')
+          combined = Path('combined-artifacts')
+          staging.mkdir(exist_ok=True)
+          combined.mkdir(exist_ok=True)
+          registered = set()
+          for line in Path('gradle.properties').read_text(encoding='utf-8').splitlines():
+              if line.startswith('stonecutter_enabled_versions='):
+                  registered = {v.strip() for v in line.split('=', 1)[1].split(',') if v.strip()}
+                  break
+
+          for config_file in sorted(Path('versions').glob('*/gradle.properties')):
+              if config_file.parent.name not in registered:
+                  continue
+              config = properties(config_file)
+              mc = config['minecraft_version']
+              enabled = [v.strip() for v in config['enable_platforms'].split(',') if v.strip()]
+              for loader in enabled:
+                  jars = []
+                  for jar in sorted((Path(loader) / 'versions' / mc / 'build' / 'libs').glob('*.jar')):
+                      if any(token in jar.name for token in ('-sources.jar', '-javadoc.jar', '-dev.jar', '-slim.jar')):
+                          continue
+                      jars.append(jar)
+                  if not jars:
+                      raise SystemExit(f'No publishable jar for {loader} {mc}')
+                  group = f'{loader}-{mc}'
+                  target = staging / group
+                  target.mkdir(parents=True, exist_ok=True)
+                  for jar in jars:
+                      # ForgeGradle's legacy remapping chain names its final
+                      # production jar `-slim-all.jar`.  `slim-all` is an
+                      # internal classifier, not a user-facing variant; keep
+                      # that final remapped content but publish the canonical
+                      # mod filename without the classifier.
+                      published_name = jar.name
+                      if published_name.endswith('-slim-all.jar'):
+                          published_name = published_name[:-len('-slim-all.jar')] + '.jar'
+                      shutil.copy2(jar, target / published_name)
+                      flattened = combined / published_name
+                      if flattened.exists():
+                          raise SystemExit(f'Duplicate flattened jar: {jar.name}')
+                      shutil.copy2(jar, flattened)
+          if not any(combined.iterdir()):
+              raise SystemExit('No mod jars were collected')
+          PY
+
+      - name: Upload commit artifact
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jars
+          path: combined-artifacts/*.jar
+          if-no-files-found: error
+
+      - name: Upload release staging artifact
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.artifact_name }}
+          path: |
+            artifacts/
+            combined-artifacts/
+          if-no-files-found: error

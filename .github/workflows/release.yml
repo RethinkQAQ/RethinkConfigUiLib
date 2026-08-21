@@ -1,0 +1,59 @@
+name: Release Mod Template
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-mods.yml
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/combined-artifacts/*.jar
+
+  # Temporarily disabled: publishing to Modrinth and CurseForge is opt-in.
+  # Re-enable this job when the corresponding project IDs and tokens are configured.
+  # publish-platforms:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix: ${{ fromJSON(needs.build.outputs.publish_matrix) }}
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: ${{ needs.build.outputs.artifact_name }}
+  #         path: artifacts
+  #     - name: Check publishing configuration
+  #       env:
+  #         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+  #         CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+  #         MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+  #         CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+  #       run: test -n "$MODRINTH_TOKEN" && test -n "$CURSEFORGE_TOKEN" && test -n "$MODRINTH_PROJECT_ID" && test -n "$CURSEFORGE_PROJECT_ID"
+  #     - uses: Kir-Antipov/mc-publish@v3.3
+  #       with:
+  #         modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+  #         modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+  #         curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+  #         curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+  #         files: artifacts/artifacts/${{ matrix.path }}/*.jar
+  #         name: ${{ github.event.release.name || github.ref_name }} for Minecraft ${{ matrix.minecraft_version }}
+  #         version: ${{ matrix.platform_version }}
+  #         version-type: ${{ github.event.release.prerelease && 'beta' || 'release' }}
+  #         loaders: ${{ matrix.loader }}
+  #         game-versions: ${{ matrix.game_versions }}
+  #         game-version-filter: none
+  #         changelog: ${{ github.event.release.body }}
