@@ -15,16 +15,25 @@ import java.util.Objects;
 
 /** Embeds one core UI tree inside a Minecraft Screen or an existing render callback. */
 public final class UiHost {
+    /** Selects whether a tree is a centred form or an application-style responsive page. */
+    public enum LayoutMode { CONTENT, FULLSCREEN }
+
     private final Ui.Node root;
     private final UiTheme theme;
     private int width = -1;
     private int height = -1;
     private Ui.Node focused;
     private UiRenderer renderer;
+    private final LayoutMode layoutMode;
 
     public UiHost(Ui.Node root, UiTheme theme) {
+        this(root, theme, LayoutMode.CONTENT);
+    }
+
+    public UiHost(Ui.Node root, UiTheme theme, LayoutMode layoutMode) {
         this.root = Objects.requireNonNull(root, "root");
         this.theme = Objects.requireNonNull(theme, "theme");
+        this.layoutMode = Objects.requireNonNull(layoutMode, "layoutMode");
     }
 
     public UiTheme theme() { return theme; }
@@ -33,15 +42,21 @@ public final class UiHost {
         this.renderer = renderer;
         if (width != screenWidth || height != screenHeight) {
             width = screenWidth; height = screenHeight;
-            float availableWidth = Math.max(0, Math.min(screenWidth - 48, 540));
-            float availableHeight = Math.max(0, screenHeight - 48);
+            float horizontalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
+            float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
+            float availableWidth = Math.max(0, screenWidth - horizontalInset * 2);
+            if (layoutMode == LayoutMode.CONTENT) availableWidth = Math.min(availableWidth, 540);
+            float availableHeight = Math.max(0, screenHeight - verticalInset * 2);
             root.measure(renderer, availableWidth, availableHeight, theme);
             float contentWidth = Math.min(availableWidth, root.measuredWidth());
             float contentHeight = Math.min(availableHeight, root.measuredHeight());
+            float contentX = layoutMode == LayoutMode.CONTENT ? (screenWidth - contentWidth) / 2f : horizontalInset;
+            float contentY = verticalInset;
             root.layout(renderer, new com.rethinkqaq.configui.core.UiBounds(
-                (screenWidth - contentWidth) / 2f, 24, contentWidth, contentHeight), theme);
+                contentX, contentY, contentWidth, contentHeight), theme);
         }
         updateHovered(root, mouseX, mouseY);
+        advanceMotion(root, System.nanoTime());
         root.render(renderer, theme);
         hoveredTooltip(root).ifPresent(tooltip -> renderTooltip(renderer, tooltip.text(), screenWidth, screenHeight, mouseX, mouseY));
     }
@@ -50,6 +65,12 @@ public final class UiHost {
         boolean handled = root.click((float) mouseX, (float) mouseY, button);
         if (handled) focusAt((float) mouseX, (float) mouseY);
         return handled;
+    }
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return release(root, (float) mouseX, (float) mouseY, button);
+    }
+    public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        return drag(root, (float) mouseX, (float) mouseY, button);
     }
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         boolean handled = root.scroll((float) mouseX, (float) mouseY, amount);
@@ -64,7 +85,28 @@ public final class UiHost {
     private void updateHovered(Ui.Node node, float x, float y) {
         node.setHovered(node.bounds().contains(x, y));
         if (node instanceof Ui.Tooltip tooltip) updateHovered(tooltip.child(), x, y);
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) updateHovered(child, x, y);
         if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) updateHovered(child, x, y);
+    }
+    private void advanceMotion(Ui.Node node, long nowNanos) {
+        node.advanceMotion(nowNanos, theme);
+        if (node instanceof Ui.Tooltip tooltip) advanceMotion(tooltip.child(), nowNanos);
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) advanceMotion(child, nowNanos);
+        if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) advanceMotion(child, nowNanos);
+    }
+    private boolean release(Ui.Node node, float x, float y, int button) {
+        boolean handled = node.release(x, y, button);
+        if (node instanceof Ui.Tooltip tooltip) handled |= release(tooltip.child(), x, y, button);
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) handled |= release(child, x, y, button);
+        if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) handled |= release(child, x, y, button);
+        return handled;
+    }
+    private boolean drag(Ui.Node node, float x, float y, int button) {
+        boolean handled = node.drag(x, y, button);
+        if (node instanceof Ui.Tooltip tooltip) handled |= drag(tooltip.child(), x, y, button);
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) handled |= drag(child, x, y, button);
+        if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) handled |= drag(child, x, y, button);
+        return handled;
     }
     private List<Ui.Node> focusable() {
         List<Ui.Node> result = new ArrayList<>();
@@ -73,11 +115,18 @@ public final class UiHost {
     private void collect(Ui.Node node, List<Ui.Node> result) {
         if (node.focusable()) result.add(node);
         if (node instanceof Ui.Tooltip tooltip) collect(tooltip.child(), result);
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) collect(child, result);
         if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) collect(child, result);
     }
     private java.util.Optional<Ui.Tooltip> hoveredTooltip(Ui.Node node) {
         if (node instanceof Ui.Tooltip tooltip && tooltip.hovered()) return java.util.Optional.of(tooltip);
         if (node instanceof Ui.Tooltip tooltip) return hoveredTooltip(tooltip.child());
+        if (node instanceof Ui.ChildProvider provider) {
+            for (Ui.Node child : provider.childNodes()) {
+                java.util.Optional<Ui.Tooltip> result = hoveredTooltip(child);
+                if (result.isPresent()) return result;
+            }
+        }
         if (node instanceof Ui.Container container) {
             for (Ui.Node child : container.children()) {
                 java.util.Optional<Ui.Tooltip> result = hoveredTooltip(child);

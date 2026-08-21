@@ -26,9 +26,13 @@ public class UiScreen extends Screen {
     private final UiHost host;
 
     public UiScreen(Screen parent, Ui.Node root, UiTheme theme) {
+        this(parent, root, theme, UiHost.LayoutMode.CONTENT);
+    }
+
+    public UiScreen(Screen parent, Ui.Node root, UiTheme theme, UiHost.LayoutMode layoutMode) {
         super(Component.literal("Rethink Config UI"));
         this.parent = parent;
-        this.host = new UiHost(root, theme);
+        this.host = new UiHost(root, theme, layoutMode);
     }
 
     public UiHost host() { return host; }
@@ -48,9 +52,13 @@ public class UiScreen extends Screen {
 
     //? if >=1.21.11 {
     /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x(), event.y(), event.button()); }
+    @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x(), event.y(), event.button()); }
+    @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(mouseX, mouseY, event.button()); }
     @Override public boolean keyPressed(KeyEvent event) { return host.keyPressed(event.key(), event.modifiers()) || super.keyPressed(event); }
     *///?} else {
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) { return host.mouseClicked(mouseX, mouseY, button); }
+    @Override public boolean mouseReleased(double mouseX, double mouseY, int button) { return host.mouseReleased(mouseX, mouseY, button); }
+    @Override public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) { return host.mouseDragged(mouseX, mouseY, button); }
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return host.keyPressed(keyCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers); }
     //?}
 

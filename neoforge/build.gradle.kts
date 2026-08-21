@@ -9,11 +9,14 @@ dependencies {
     implementation(project(":core"))
 }
 
-tasks.jar {
+// ModDev loads the registered source set directly during development rather than
+// the finished jar. Make core part of that output as well as the final artifact.
+val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+sourceSets.named("main") {
+    output.dir(coreClasses)
+}
+tasks.named("classes") {
     dependsOn(":core:classes")
-    dependsOn(":common:${commonMod.mc}:classes")
-    from(project(":core").layout.buildDirectory.dir("classes/java/main"))
-    from(rootProject.project(":common:${commonMod.mc}").layout.buildDirectory.dir("classes/java/main"))
 }
 
 afterEvaluate {

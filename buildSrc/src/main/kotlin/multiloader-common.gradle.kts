@@ -75,6 +75,13 @@ val runJavaLauncher = javaToolchains.launcherFor {
 }
 tasks.withType<JavaExec>().configureEach {
     javaLauncher.set(runJavaLauncher)
+    // JavaExec does not inherit Gradle's -D properties automatically. Forward
+    // the opt-in RCUI demo switch to the actual Minecraft process.
+    listOf("rethink_config_ui_lib_example", "rethink_config_ui_lib.example").forEach { propertyName ->
+        providers.systemProperty(propertyName).orNull?.let { propertyValue ->
+            systemProperty(propertyName, propertyValue)
+        }
+    }
 }
 
 // Some loader plugins replace the executable of their Minecraft run tasks after

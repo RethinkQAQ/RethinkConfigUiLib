@@ -33,7 +33,7 @@ public final class FlatDemoButton extends AbstractWidget {
     }
 
     //? if >=26.1 {
-    /*@Override protected void renderWidget(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    /*@Override protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
     *///?} else {
     @Override protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     //?}

@@ -33,11 +33,14 @@ configurations.configureEach {
     }
 }
 
-tasks.jar {
+// Loom development runs use the source-set output directly. Include core there
+// too, while the normal Java jar task packages the same output for distribution.
+val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+sourceSets.named("main") {
+    output.dir(coreClasses)
+}
+tasks.named("classes") {
     dependsOn(":core:classes")
-    dependsOn(":common:${commonMod.mc}:classes")
-    from(project(":core").layout.buildDirectory.dir("classes/java/main"))
-    from(rootProject.project(":common:${commonMod.mc}").layout.buildDirectory.dir("classes/java/main"))
 }
 
 afterEvaluate {

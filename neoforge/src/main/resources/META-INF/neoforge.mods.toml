@@ -1,5 +1,7 @@
 modLoader="javafml"
-loaderVersion="[${neoForgeMinVersion},)"
+# This version range applies to the JavaFML language provider, not NeoForge.
+# NeoForge 1.21.1 exposes JavaFML 4.x while its own version is 21.1.x.
+loaderVersion="[1,)"
 license="${modLicense}"
 issueTrackerURL="https://github.com/${modGitHub}/issues"
 

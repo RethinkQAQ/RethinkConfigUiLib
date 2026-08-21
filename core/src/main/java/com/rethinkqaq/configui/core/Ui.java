@@ -18,9 +18,16 @@ public final class Ui {
     public static Row row() { return new Row(); }
     public static Stack stack() { return new Stack(); }
     public static Panel panel() { return new Panel(); }
+    public static Panel card() { return new Panel(); }
     public static Section section(UiText title) { return new Section(title); }
     public static Label label(UiText text) { return new Label(text); }
     public static Divider divider() { return new Divider(); }
+    public static UiBadge badge(UiText text) { return new UiBadge(text); }
+    public static UiGrid grid() { return new UiGrid(); }
+    public static UiScaffold scaffold(Node content) { return new UiScaffold(content); }
+    public static UiSplitLayout split(Node primary, Node secondary) { return new UiSplitLayout(primary, secondary); }
+    public static UiSettingRow settingRow(UiText label, Node control) { return new UiSettingRow(label, control); }
+    public static UiPreviewCard previewCard(UiText title, Node preview) { return new UiPreviewCard(title, preview); }
     public static Button button(UiText text, Runnable action) { return new Button(text, action); }
     public static IconButton iconButton(UiText label, Runnable action) { return new IconButton(label, action); }
     public static Toggle toggle(UiText text, UiBinding<Boolean> binding) { return new Toggle(text, binding); }
@@ -29,6 +36,29 @@ public final class Ui {
     public static ScrollView scrollView(Node child) { return new ScrollView(child); }
     public static Tooltip tooltip(Node child, UiText text) { return new Tooltip(child, text); }
 
+    /** Draws one line without allowing it to paint outside the supplied width. */
+    public static void drawFittedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth, int color) {
+        if (maxWidth <= 0) return;
+        UiText displayed = fitted(renderer, text, maxWidth);
+        renderer.pushClip(new UiBounds(x, y, maxWidth, renderer.lineHeight()));
+        renderer.drawText(displayed, x, y, color);
+        renderer.popClip();
+    }
+
+    private static UiText fitted(UiRenderer renderer, UiText text, float maxWidth) {
+        UiText displayed = text;
+        if (!text.translatable() && renderer.textWidth(text) > maxWidth) {
+            String suffix = "...";
+            float suffixWidth = renderer.textWidth(UiText.literal(suffix));
+            int end = text.value().length();
+            while (end > 0 && renderer.textWidth(UiText.literal(text.value().substring(0, end))) + suffixWidth > maxWidth) end--;
+            displayed = UiText.literal(end == 0 ? suffix : text.value().substring(0, end) + suffix);
+        }
+        return displayed;
+    }
+
+    public enum ButtonVariant { PRIMARY, SECONDARY, OUTLINE, DANGER }
+
     public abstract static class Node {
         protected UiBounds bounds = UiBounds.EMPTY;
         protected float measuredWidth;
@@ -36,6 +66,9 @@ public final class Ui {
         private boolean enabled = true;
         private boolean hovered;
         private boolean focused;
+        private long lastMotionNanos = System.nanoTime();
+        private float hoverProgress;
+        private float focusProgress;
 
         public Node enabled(boolean value) { enabled = value; return this; }
         public boolean enabled() { return enabled; }
@@ -44,16 +77,52 @@ public final class Ui {
         public UiBounds bounds() { return bounds; }
         public void setHovered(boolean value) { hovered = value; }
         public void setFocused(boolean value) { focused = value; }
+        /** Current interpolated hover state in the inclusive range [0, 1]. */
+        public float hoverProgress() { return hoverProgress; }
+        /** Current interpolated keyboard-focus state in the inclusive range [0, 1]. */
+        public float focusProgress() { return focusProgress; }
+        /** Advanced by the host once per frame; no platform types are needed in core. */
+        public void advanceMotion(long nowNanos, UiTheme theme) {
+            float elapsedMillis = Math.max(0f, (nowNanos - lastMotionNanos) / 1_000_000f);
+            lastMotionNanos = nowNanos;
+            hoverProgress = approach(hoverProgress, hovered ? 1f : 0f, elapsedMillis, theme.motion().hoverMillis());
+            focusProgress = approach(focusProgress, focused ? 1f : 0f, elapsedMillis, theme.motion().focusMillis());
+        }
+        protected static float approach(float current, float target, float elapsedMillis, int durationMillis) {
+            if (durationMillis <= 0) return target;
+            float step = Math.min(1f, elapsedMillis / durationMillis);
+            return current + (target - current) * step;
+        }
+        protected static int blend(int from, int to, float amount) {
+            float t = Math.max(0f, Math.min(1f, amount));
+            int a = Math.round(((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * t);
+            int r = Math.round(((from >>> 16) & 0xFF) + (((to >>> 16) & 0xFF) - ((from >>> 16) & 0xFF)) * t);
+            int g = Math.round(((from >>> 8) & 0xFF) + (((to >>> 8) & 0xFF) - ((from >>> 8) & 0xFF)) * t);
+            int b = Math.round((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
+            return a << 24 | r << 16 | g << 8 | b;
+        }
         public final void measure(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) { measureSelf(renderer, maxWidth, maxHeight, theme); }
         protected abstract void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme);
         public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) { bounds = value; }
         public abstract void render(UiRenderer renderer, UiTheme theme);
         public boolean click(float mouseX, float mouseY, int button) { return false; }
         public boolean scroll(float mouseX, float mouseY, double amount) { return false; }
+        /** Called while the primary mouse button is held after a successful click. */
+        public boolean drag(float mouseX, float mouseY, int button) { return false; }
         public boolean key(int keyCode) { return false; }
+        /** Called when the host receives a mouse-release event. */
+        public boolean release(float mouseX, float mouseY, int button) { return false; }
         public boolean focusable() { return false; }
+        protected boolean hasVisibleFocus(UiTheme theme) {
+            return focusProgress() > .01f && ((theme.palette().focusRing() >>> 24) & 0xFF) > 0;
+        }
         public float measuredWidth() { return measuredWidth; }
         public float measuredHeight() { return measuredHeight; }
+    }
+
+    /** Implemented by nodes which own children without using the generic container layout. */
+    public interface ChildProvider {
+        List<Node> childNodes();
     }
 
     public abstract static class Container extends Node {
@@ -123,10 +192,11 @@ public final class Ui {
         }
         @Override public void layout(UiRenderer r, UiBounds value, UiTheme t) { super.layout(r, value, t); super.layout(r, value.inset(t.metrics().padding()), t); bounds = value; }
         @Override public void render(UiRenderer r, UiTheme t) {
-            // A very soft, flat-design shadow gives cards separation without introducing a
-            // texture, shader or native rendering dependency.
-            r.fillRoundRect(bounds.offset(0, 3), t.metrics().radius() + 2, 0x16000000);
-            r.fillRoundRect(bounds, t.metrics().radius(), color == Integer.MIN_VALUE ? t.palette().surfaceRaised() : color);
+            if (t.metrics().shadowOffset() > 0) {
+                r.fillRoundRect(bounds.offset(0, t.metrics().shadowOffset()), t.metrics().cardRadius(), 0x10000000);
+            }
+            r.fillRoundRect(bounds, t.metrics().cardRadius(), color == Integer.MIN_VALUE ? t.palette().surfaceRaised() : color);
+            r.strokeRoundRect(bounds, t.metrics().cardRadius(), t.metrics().borderWidth(), t.palette().border());
             super.render(r, t);
         }
     }
@@ -136,14 +206,14 @@ public final class Ui {
         private Section(UiText value) { title = Objects.requireNonNull(value, "title"); }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { super.measureSelf(r, maxW, maxH - r.lineHeight() - t.metrics().spacing(), t); measuredHeight += r.lineHeight() + t.metrics().spacing(); }
         @Override public void layout(UiRenderer r, UiBounds value, UiTheme t) { super.layout(r, value, t); for (Node child : children) child.layout(r, new UiBounds(child.bounds.x(), child.bounds.y() + r.lineHeight() + t.metrics().spacing(), child.bounds.width(), child.bounds.height()), t); }
-        @Override public void render(UiRenderer r, UiTheme t) { super.render(r, t); r.drawText(title, bounds.x() + t.metrics().padding(), bounds.y() + t.metrics().padding(), t.palette().textPrimary()); }
+        @Override public void render(UiRenderer r, UiTheme t) { super.render(r, t); drawFittedText(r, title, bounds.x() + t.metrics().padding(), bounds.y() + t.metrics().padding(), bounds.width() - t.metrics().padding() * 2, t.palette().textPrimary()); }
     }
 
     public static final class Label extends Node {
         private final UiText text;
         private Label(UiText value) { text = Objects.requireNonNull(value, "text"); }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = Math.min(maxW, r.textWidth(text)); measuredHeight = r.lineHeight(); }
-        @Override public void render(UiRenderer r, UiTheme t) { r.drawText(text, bounds.x(), bounds.y(), t.palette().textSecondary()); }
+        @Override public void render(UiRenderer r, UiTheme t) { drawFittedText(r, text, bounds.x(), bounds.y(), bounds.width(), t.palette().textSecondary()); }
     }
 
     public static final class Divider extends Node {
@@ -153,15 +223,31 @@ public final class Ui {
 
     public static class Button extends Node {
         protected final UiText text; private final Runnable action; private boolean pressed;
+        private ButtonVariant variant = ButtonVariant.PRIMARY;
         private Button(UiText value, Runnable callback) { text = Objects.requireNonNull(value, "text"); action = Objects.requireNonNull(callback, "action"); }
+        public Button variant(ButtonVariant value) { variant = Objects.requireNonNull(value, "variant"); return this; }
+        public ButtonVariant variant() { return variant; }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = Math.min(maxW, Math.max(t.metrics().controlHeight() * 2, r.textWidth(text) + t.metrics().padding() * 3)); measuredHeight = t.metrics().controlHeight(); }
         @Override public void render(UiRenderer r, UiTheme t) {
-            int color = !enabled() ? t.palette().border() : pressed ? t.palette().accentPressed() : hovered() ? t.palette().accentHover() : t.palette().control();
-            r.fillRoundRect(bounds, t.metrics().radius(), color); float x = bounds.x() + (bounds.width() - r.textWidth(text)) / 2; r.drawText(text, x, bounds.y() + (bounds.height() - r.lineHeight()) / 2, t.palette().onAccent());
-            if (focused()) r.strokeRoundRect(bounds, t.metrics().radius(), t.metrics().borderWidth(), t.palette().focusRing());
+            int color = color(t);
+            int textColor = (variant == ButtonVariant.SECONDARY || variant == ButtonVariant.OUTLINE) && enabled()
+                ? t.palette().textPrimary() : t.palette().onAccent();
+            r.fillRoundRect(bounds, t.metrics().controlRadius(), color); UiText displayed = fitted(r, text, Math.max(0, bounds.width() - t.metrics().padding() * 2)); float x = bounds.x() + (bounds.width() - r.textWidth(displayed)) / 2; drawFittedText(r, displayed, x, bounds.y() + (bounds.height() - r.lineHeight()) / 2, Math.max(0, bounds.x() + bounds.width() - t.metrics().padding() - x), textColor);
+            if (variant == ButtonVariant.OUTLINE || variant == ButtonVariant.SECONDARY) r.strokeRoundRect(bounds, t.metrics().controlRadius(), t.metrics().borderWidth(), t.palette().border());
+            if (hasVisibleFocus(t)) r.strokeRoundRect(bounds, t.metrics().controlRadius(), t.metrics().borderWidth(), blend(t.palette().border(), t.palette().focusRing(), focusProgress()));
         }
-        @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { pressed = true; action.run(); pressed = false; return true; } return false; }
+        private int color(UiTheme theme) {
+            if (!enabled()) return theme.palette().controlDisabled();
+            return switch (variant) {
+                case PRIMARY -> pressed ? theme.palette().accentPressed() : blend(theme.palette().control(), theme.palette().accentHover(), hoverProgress());
+                case SECONDARY -> pressed ? theme.palette().border() : blend(theme.palette().surfaceRaised(), theme.palette().surface(), hoverProgress());
+                case OUTLINE -> pressed ? theme.palette().border() : blend(theme.palette().surface(), theme.palette().surfaceRaised(), hoverProgress());
+                case DANGER -> pressed ? theme.palette().danger() : blend(theme.palette().danger(), theme.palette().accentPressed(), hoverProgress());
+            };
+        }
+        @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { pressed = true; action.run(); return true; } return false; }
         @Override public boolean key(int keyCode) { if (enabled() && (keyCode == UiKey.ENTER || keyCode == UiKey.SPACE)) { action.run(); return true; } return false; }
+        @Override public boolean release(float x, float y, int button) { boolean wasPressed = pressed; if (button == 0) pressed = false; return wasPressed; }
         @Override public boolean focusable() { return enabled(); }
     }
 
@@ -169,13 +255,29 @@ public final class Ui {
 
     public static final class Toggle extends Node {
         private final UiText text; private final UiBinding<Boolean> binding;
+        private float onProgress = -1f;
+        private long lastValueMotionNanos;
         private Toggle(UiText value, UiBinding<Boolean> target) { text = value; binding = target; }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = maxW; measuredHeight = t.metrics().controlHeight(); }
         @Override public void render(UiRenderer r, UiTheme t) {
-            boolean on = Boolean.TRUE.equals(binding.get()); r.drawText(text, bounds.x(), bounds.y() + (bounds.height() - r.lineHeight()) / 2, t.palette().textPrimary());
-            float width = t.metrics().controlHeight() * 1.65f; UiBounds track = new UiBounds(bounds.x() + bounds.width() - width, bounds.y(), width, bounds.height()); r.fillRoundRect(track, track.height() / 2, on ? t.palette().accent() : t.palette().control());
-            float knob = track.height() - t.metrics().padding(); r.fillRoundRect(new UiBounds(track.x() + (on ? track.width() - knob - t.metrics().padding() / 2 : t.metrics().padding() / 2), track.y() + t.metrics().padding() / 2, knob, knob), knob / 2, t.palette().surfaceRaised());
-            if (focused()) r.strokeRoundRect(track, track.height() / 2, t.metrics().borderWidth(), t.palette().focusRing());
+            boolean on = Boolean.TRUE.equals(binding.get());
+            float width = t.metrics().controlHeight() * 1.65f;
+            drawFittedText(r, text, bounds.x(), bounds.y() + (bounds.height() - r.lineHeight()) / 2,
+                Math.max(0, bounds.width() - width - t.metrics().spacing()), enabled() ? t.palette().textPrimary() : t.palette().textDisabled());
+            float progress = onProgress < 0 ? (on ? 1f : 0f) : onProgress;
+            UiBounds track = new UiBounds(bounds.x() + bounds.width() - width, bounds.y(), width, bounds.height()); r.fillRoundRect(track, track.height() / 2, !enabled() ? t.palette().controlDisabled() : blend(t.palette().control(), t.palette().accent(), progress));
+            float knob = track.height() - t.metrics().padding(); r.fillRoundRect(new UiBounds(track.x() + t.metrics().padding() / 2 + (track.width() - knob - t.metrics().padding()) * progress, track.y() + t.metrics().padding() / 2, knob, knob), knob / 2, t.palette().surfaceRaised());
+            if (hasVisibleFocus(t)) r.strokeRoundRect(track, track.height() / 2, t.metrics().borderWidth(), blend(t.palette().border(), t.palette().focusRing(), focusProgress()));
+        }
+        /** Interpolated visual state, useful for custom renderers and tests. */
+        public float onProgress() { return onProgress < 0 ? (Boolean.TRUE.equals(binding.get()) ? 1f : 0f) : onProgress; }
+        @Override public void advanceMotion(long nowNanos, UiTheme theme) {
+            super.advanceMotion(nowNanos, theme);
+            float target = Boolean.TRUE.equals(binding.get()) ? 1f : 0f;
+            float elapsedMillis = lastValueMotionNanos == 0 ? 0f : Math.max(0f, (nowNanos - lastValueMotionNanos) / 1_000_000f);
+            lastValueMotionNanos = nowNanos;
+            if (onProgress < 0) onProgress = target;
+            else onProgress = approach(onProgress, target, elapsedMillis, theme.motion().toggleMillis());
         }
         private void flip() { binding.set(!Boolean.TRUE.equals(binding.get())); }
         @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { flip(); return true; } return false; }
@@ -185,11 +287,27 @@ public final class Ui {
 
     public static final class Slider extends Node {
         private final UiText text; private final UiBinding<Double> binding; private final double min, max, step;
+        private float displayedRatio = -1f;
+        private long lastValueMotionNanos;
         private Slider(UiText value, UiBinding<Double> target, double low, double high, double increment) { text = value; binding = target; min = low; max = high; step = increment; if (high <= low || increment <= 0) throw new IllegalArgumentException("invalid slider range"); }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = maxW; measuredHeight = t.metrics().controlHeight() + r.lineHeight(); }
         private void set(double value) { binding.set(Math.max(min, Math.min(max, Math.round((value - min) / step) * step + min))); }
-        @Override public void render(UiRenderer r, UiTheme t) { double value = binding.get(); r.drawText(text, bounds.x(), bounds.y(), t.palette().textPrimary()); UiBounds rail = new UiBounds(bounds.x(), bounds.y() + r.lineHeight() + t.metrics().spacing(), bounds.width(), t.metrics().borderWidth() * 2); r.fillRoundRect(rail, rail.height(), t.palette().border()); float ratio = (float) ((value - min) / (max - min)); r.fillRoundRect(new UiBounds(rail.x(), rail.y(), rail.width() * ratio, rail.height()), rail.height(), t.palette().accent()); float knob = t.metrics().controlHeight() * .45f; r.fillRoundRect(new UiBounds(rail.x() + rail.width() * ratio - knob / 2, rail.y() - knob / 2 + rail.height() / 2, knob, knob), knob / 2, t.palette().accent()); }
-        @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { set(min + (x - bounds.x()) / bounds.width() * (max - min)); return true; } return false; }
+        @Override public void render(UiRenderer r, UiTheme t) { int textColor = enabled() ? t.palette().textPrimary() : t.palette().textDisabled(); int accent = enabled() ? t.palette().accent() : t.palette().controlDisabled(); drawFittedText(r, text, bounds.x(), bounds.y(), bounds.width(), textColor); UiBounds rail = new UiBounds(bounds.x(), bounds.y() + r.lineHeight() + t.metrics().spacing(), bounds.width(), Math.max(1f, t.metrics().borderWidth() * 2)); r.fillRoundRect(rail, rail.height(), t.palette().border()); float ratio = displayedRatio < 0 ? targetRatio() : displayedRatio; r.fillRoundRect(new UiBounds(rail.x(), rail.y(), rail.width() * ratio, rail.height()), rail.height(), accent); float knob = t.metrics().controlHeight() * .45f; r.fillRoundRect(new UiBounds(rail.x() + rail.width() * ratio - knob / 2, rail.y() - knob / 2 + rail.height() / 2, knob, knob), knob / 2, accent); if (hasVisibleFocus(t)) r.strokeRoundRect(new UiBounds(rail.x() - knob / 2, rail.y() - knob / 2, rail.width() + knob, knob + rail.height()), knob / 2, t.metrics().borderWidth(), blend(t.palette().border(), t.palette().focusRing(), focusProgress())); }
+        public float displayedRatio() { return displayedRatio < 0 ? targetRatio() : displayedRatio; }
+        @Override public void advanceMotion(long nowNanos, UiTheme theme) {
+            super.advanceMotion(nowNanos, theme);
+            float target = targetRatio();
+            float elapsedMillis = lastValueMotionNanos == 0 ? 0f : Math.max(0f, (nowNanos - lastValueMotionNanos) / 1_000_000f);
+            lastValueMotionNanos = nowNanos;
+            if (displayedRatio < 0) displayedRatio = target;
+            else displayedRatio = approach(displayedRatio, target, elapsedMillis, theme.motion().toggleMillis());
+        }
+        private float targetRatio() { return Math.max(0f, Math.min(1f, (float) ((binding.get() - min) / (max - min)))); }
+        private boolean dragging;
+        private void setFromX(float x) { set(min + Math.max(0f, Math.min(1f, (x - bounds.x()) / Math.max(1f, bounds.width()))) * (max - min)); }
+        @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { dragging = true; setFromX(x); return true; } return false; }
+        @Override public boolean drag(float x, float y, int button) { if (enabled() && dragging && button == 0) { setFromX(x); return true; } return false; }
+        @Override public boolean release(float x, float y, int button) { boolean wasDragging = dragging; if (button == 0) dragging = false; return wasDragging; }
         @Override public boolean key(int keyCode) { if (!enabled()) return false; if (keyCode == UiKey.LEFT || keyCode == UiKey.DOWN) { set(binding.get() - step); return true; } if (keyCode == UiKey.RIGHT || keyCode == UiKey.UP) { set(binding.get() + step); return true; } return false; }
         @Override public boolean focusable() { return enabled(); }
     }
@@ -199,7 +317,7 @@ public final class Ui {
         private Select(UiText value, UiBinding<T> target, List<T> options, Function<T, UiText> labeler) { text = value; binding = target; values = List.copyOf(options); labels = labeler; if (values.isEmpty()) throw new IllegalArgumentException("Select options must not be empty"); }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = maxW; measuredHeight = t.metrics().controlHeight(); }
         private void advance(int amount) { int at = values.indexOf(binding.get()); binding.set(values.get(Math.floorMod(at + amount, values.size()))); }
-        @Override public void render(UiRenderer r, UiTheme t) { r.fillRoundRect(bounds, t.metrics().radius(), hovered() ? t.palette().controlHover() : t.palette().control()); r.drawText(text, bounds.x() + t.metrics().padding(), bounds.y() + (bounds.height() - r.lineHeight()) / 2, t.palette().onAccent()); UiText selected = labels.apply(binding.get()); r.drawText(selected, bounds.x() + bounds.width() - t.metrics().padding() - r.textWidth(selected), bounds.y() + (bounds.height() - r.lineHeight()) / 2, t.palette().onAccent()); }
+        @Override public void render(UiRenderer r, UiTheme t) { int color = !enabled() ? t.palette().controlDisabled() : blend(t.palette().control(), t.palette().controlHover(), hoverProgress()); r.fillRoundRect(bounds, t.metrics().controlRadius(), color); int textColor = enabled() ? t.palette().onAccent() : t.palette().textDisabled(); float innerWidth = Math.max(0, bounds.width() - t.metrics().padding() * 2), half = innerWidth * .5f; drawFittedText(r, text, bounds.x() + t.metrics().padding(), bounds.y() + (bounds.height() - r.lineHeight()) / 2, half, textColor); UiText selected = fitted(r, labels.apply(binding.get()), half); drawFittedText(r, selected, bounds.x() + bounds.width() - t.metrics().padding() - r.textWidth(selected), bounds.y() + (bounds.height() - r.lineHeight()) / 2, half, textColor); if (hasVisibleFocus(t)) r.strokeRoundRect(bounds, t.metrics().controlRadius(), t.metrics().borderWidth(), blend(t.palette().border(), t.palette().focusRing(), focusProgress())); }
         @Override public boolean click(float x, float y, int button) { if (enabled() && button == 0 && bounds.contains(x, y)) { advance(1); return true; } return false; }
         @Override public boolean key(int keyCode) { if (!enabled()) return false; if (keyCode == UiKey.LEFT || keyCode == UiKey.UP) { advance(-1); return true; } if (keyCode == UiKey.RIGHT || keyCode == UiKey.DOWN || keyCode == UiKey.ENTER || keyCode == UiKey.SPACE) { advance(1); return true; } return false; }
         @Override public boolean focusable() { return enabled(); }

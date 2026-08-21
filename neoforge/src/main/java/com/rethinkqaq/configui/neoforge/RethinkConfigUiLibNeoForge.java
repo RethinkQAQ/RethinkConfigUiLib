@@ -7,14 +7,12 @@ package com.rethinkqaq.configui.neoforge;
 
 import com.rethinkqaq.configui.minecraft.RethinkConfigUiLib;
 import net.neoforged.fml.common.Mod;
-import com.rethinkqaq.configui.minecraft.DemoLauncher;
+import net.neoforged.neoforge.common.NeoForge;
 
 /** Loader marker; the optional demo is deliberately opt-in. */
 @Mod(RethinkConfigUiLib.MOD_ID)
 public final class RethinkConfigUiLibNeoForge {
     public RethinkConfigUiLibNeoForge() {
-        if (Boolean.getBoolean("rethink_config_ui_lib_example") || Boolean.getBoolean("rethink_config_ui_lib.example")) {
-            DemoLauncher.install();
-        }
+        NeoForge.EVENT_BUS.addListener(RethinkConfigUiLibClientEvents::addDemoButton);
     }
 }

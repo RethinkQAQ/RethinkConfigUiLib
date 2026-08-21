@@ -2,6 +2,7 @@ import net.minecraftforge.jarjar.gradle.JarJar
 import net.minecraftforge.renamer.gradle.RenamerExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.kotlin.dsl.withGroovyBuilder
 
 buildscript {
@@ -20,6 +21,24 @@ if (legacyObfuscation) pluginManager.apply("net.minecraftforge.renamer")
 
 minecraft {
     mappings("official", commonMod.mc)
+}
+
+// Temporary ForgeGradle 7.0.35 compatibility patch. Its
+// SlimeLauncherMetadata task derives the @OutputFile `runsJson` from its own
+// @OutputDirectory, which Gradle 9 refuses to query during task validation.
+// Configure the same resolved archive path directly until the upstream fix ships.
+tasks.matching { it.name == "slimeLauncherMetadataForForge" }.configureEach {
+    var type: Class<*>? = javaClass
+    var runsJsonGetter: java.lang.reflect.Method? = null
+    while (type != null && runsJsonGetter == null) {
+        runsJsonGetter = runCatching { type.getDeclaredMethod("getRunsJson") }.getOrNull()
+        type = type.superclass
+    }
+    val getter = runsJsonGetter
+        ?: error("ForgeGradle metadata task no longer exposes runsJson")
+    getter.isAccessible = true
+    val runsJson = getter.invoke(this) as RegularFileProperty
+    runsJson.set(layout.buildDirectory.file("minecraftforge/forgegradle/slimeLauncherMetadataForForge/launcher/runs.json"))
 }
 
 val runClient = providers.gradleProperty("run.client").map { it.toBoolean() }.orElse(true).get()
@@ -63,12 +82,14 @@ jarJar.register {
 }
 val jarJarTask = tasks.named<JarJar>("jarJar")
 
-// Registering the JarJar container creates the dedicated dependency configuration.
-tasks.jar {
+// Forge's development runs load the registered source set rather than the final
+// JarJar archive, so core must be an output directory of the source set itself.
+val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+sourceSets.named("main") {
+    output.dir(coreClasses)
+}
+tasks.named("classes") {
     dependsOn(":core:classes")
-    dependsOn(":common:${commonMod.mc}:classes")
-    from(project(":core").layout.buildDirectory.dir("classes/java/main"))
-    from(rootProject.project(":common:${commonMod.mc}").layout.buildDirectory.dir("classes/java/main"))
 }
 
 if (legacyObfuscation) {
