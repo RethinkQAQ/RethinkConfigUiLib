@@ -22,6 +22,7 @@ public final class UiHost {
     private final UiTheme theme;
     private int width = -1;
     private int height = -1;
+    private long layoutRevision = Long.MIN_VALUE;
     private Ui.Node focused;
     private UiRenderer renderer;
     private final LayoutMode layoutMode;
@@ -62,8 +63,10 @@ public final class UiHost {
         float contentScale = contentScale(minecraftGuiScale);
         int canvasWidth = Math.max(1, Math.round(screenWidth / contentScale));
         int canvasHeight = Math.max(1, Math.round(screenHeight / contentScale));
-        if (width != canvasWidth || height != canvasHeight) {
+        long currentRevision = layoutRevision(root);
+        if (width != canvasWidth || height != canvasHeight || layoutRevision != currentRevision) {
             width = canvasWidth; height = canvasHeight;
+            layoutRevision = currentRevision;
             float horizontalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
             float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
             float availableWidth = Math.max(0, canvasWidth - horizontalInset * 2);
@@ -103,7 +106,15 @@ public final class UiHost {
     }
     public boolean keyPressed(int keyCode, int modifiers) {
         if (keyCode == UiKey.TAB) { moveFocus((modifiers & 1) != 0); return true; }
-        return focused != null && focused.key(keyCode);
+        return (focused != null && focused.key(keyCode)) || root.key(keyCode);
+    }
+
+    private long layoutRevision(Ui.Node node) {
+        long revision = node.layoutVersion();
+        if (node instanceof Ui.Tooltip tooltip) revision = Math.max(revision, layoutRevision(tooltip.child()));
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) revision = Math.max(revision, layoutRevision(child));
+        if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) revision = Math.max(revision, layoutRevision(child));
+        return revision;
     }
 
     private void updateHovered(Ui.Node node, float x, float y) {

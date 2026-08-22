@@ -25,6 +25,7 @@ public final class Ui {
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
     public static UiScaffold scaffold(Node content) { return new UiScaffold(content); }
+    public static UiPageHost pageHost() { return new UiPageHost(); }
     public static UiSplitLayout split(Node primary, Node secondary) { return new UiSplitLayout(primary, secondary); }
     public static UiSettingRow settingRow(UiText label, Node control) { return new UiSettingRow(label, control); }
     public static UiPreviewCard previewCard(UiText title, Node preview) { return new UiPreviewCard(title, preview); }
@@ -41,6 +42,45 @@ public final class Ui {
         if (maxWidth <= 0) return;
         UiText displayed = fitted(renderer, text, maxWidth);
         renderer.drawText(displayed, x, y, color);
+    }
+
+    /** Splits literal text into renderer-measured lines without allowing a line to overflow. */
+    public static List<UiText> wrapLines(UiRenderer renderer, UiText text, float maxWidth, int maxLines) {
+        if (maxWidth <= 0 || maxLines <= 0) return List.of();
+        if (text.translatable() || renderer.textWidth(text) <= maxWidth) return List.of(text);
+        List<UiText> result = new ArrayList<>();
+        String remaining = text.value().trim();
+        while (!remaining.isEmpty() && result.size() < maxLines) {
+            int length = fitPrefix(renderer, remaining, maxWidth);
+            boolean hasMore = length < remaining.length();
+            if (hasMore) {
+                int split = remaining.lastIndexOf(' ', Math.max(0, length - 1));
+                if (split > 0) length = split;
+            }
+            if (length <= 0) length = Math.min(1, remaining.length());
+            String line = remaining.substring(0, length).trim();
+            remaining = remaining.substring(length).trim();
+            if (hasMore && result.size() + 1 == maxLines) {
+                line = fitted(renderer, UiText.literal(line + "..."), maxWidth).value();
+                remaining = "";
+            }
+            result.add(UiText.literal(line));
+        }
+        if (result.isEmpty()) result.add(UiText.literal(""));
+        return result;
+    }
+
+    public static void drawWrappedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth,
+                                       int maxLines, int color, float lineGap) {
+        List<UiText> lines = wrapLines(renderer, text, maxWidth, maxLines);
+        for (int index = 0; index < lines.size(); index++) renderer.drawText(lines.get(index), x,
+            y + index * (renderer.lineHeight() + lineGap), color);
+    }
+
+    private static int fitPrefix(UiRenderer renderer, String value, float maxWidth) {
+        int end = value.length();
+        while (end > 0 && renderer.textWidth(UiText.literal(value.substring(0, end))) > maxWidth) end--;
+        return end;
     }
 
     private static UiText fitted(UiRenderer renderer, UiText text, float maxWidth) {
@@ -64,15 +104,19 @@ public final class Ui {
         private boolean enabled = true;
         private boolean hovered;
         private boolean focused;
+        private long layoutVersion;
         private long lastMotionNanos = System.nanoTime();
         private float hoverProgress;
         private float focusProgress;
 
-        public Node enabled(boolean value) { enabled = value; return this; }
+        public Node enabled(boolean value) { enabled = value; invalidateLayout(); return this; }
         public boolean enabled() { return enabled; }
         public boolean hovered() { return hovered; }
         public boolean focused() { return focused; }
         public UiBounds bounds() { return bounds; }
+        /** Marks this node's measured size or child structure as changed. */
+        public void invalidateLayout() { layoutVersion++; }
+        public long layoutVersion() { return layoutVersion; }
         public void setHovered(boolean value) { hovered = value; }
         public void setFocused(boolean value) { focused = value; }
         /** Current interpolated hover state in the inclusive range [0, 1]. */
@@ -209,9 +253,20 @@ public final class Ui {
 
     public static final class Label extends Node {
         private final UiText text;
+        private boolean wrapped;
+        private int maxLines = 3;
         private Label(UiText value) { text = Objects.requireNonNull(value, "text"); }
-        @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { measuredWidth = Math.min(maxW, r.textWidth(text)); measuredHeight = r.lineHeight(); }
-        @Override public void render(UiRenderer r, UiTheme t) { drawFittedText(r, text, bounds.x(), bounds.y(), bounds.width(), t.palette().textSecondary()); }
+        public Label wrap(boolean value) { wrapped = value; invalidateLayout(); return this; }
+        public Label maxLines(int value) { if (value <= 0) throw new IllegalArgumentException("maxLines must be positive"); maxLines = value; invalidateLayout(); return this; }
+        @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) {
+            List<UiText> lines = wrapped ? wrapLines(r, text, maxW, maxLines) : List.of(text);
+            measuredWidth = Math.min(maxW, (float) lines.stream().mapToDouble(r::textWidth).max().orElse(0));
+            measuredHeight = Math.min(maxH, r.lineHeight() * lines.size());
+        }
+        @Override public void render(UiRenderer r, UiTheme t) {
+            if (wrapped) drawWrappedText(r, text, bounds.x(), bounds.y(), bounds.width(), maxLines, t.palette().textSecondary(), 0);
+            else drawFittedText(r, text, bounds.x(), bounds.y(), bounds.width(), t.palette().textSecondary());
+        }
     }
 
     public static final class Divider extends Node {
@@ -325,10 +380,23 @@ public final class Ui {
         private float offset;
         private ScrollView(Node child) { add(child); }
         private Node child() { return children.get(0); }
+        public float offset() { return offset; }
+        public void reset() { offset = 0; }
         @Override protected void measureSelf(UiRenderer r, float maxW, float maxH, UiTheme t) { child().measure(r, maxW, Float.MAX_VALUE, t); measuredWidth = child().measuredWidth(); measuredHeight = Math.min(maxH, child().measuredHeight()); }
         @Override public void layout(UiRenderer r, UiBounds value, UiTheme t) { super.layout(r, value, t); child().layout(r, new UiBounds(value.x(), value.y() - offset, value.width(), child().measuredHeight()), t); }
         @Override public void render(UiRenderer r, UiTheme t) { r.pushClip(bounds); child().render(r, t); r.popClip(); }
         @Override public boolean scroll(float x, float y, double amount) { if (!bounds.contains(x, y)) return false; offset = Math.max(0, Math.min(Math.max(0, child().measuredHeight() - bounds.height()), (float) (offset - amount * 14))); return true; }
+        @Override public boolean key(int keyCode) {
+            float max = Math.max(0, child().measuredHeight() - bounds.height());
+            float page = Math.max(1, bounds.height() - 14);
+            if (keyCode == UiKey.UP) { offset = Math.max(0, offset - 14); return true; }
+            if (keyCode == UiKey.DOWN) { offset = Math.min(max, offset + 14); return true; }
+            if (keyCode == UiKey.PAGE_UP) { offset = Math.max(0, offset - page); return true; }
+            if (keyCode == UiKey.PAGE_DOWN) { offset = Math.min(max, offset + page); return true; }
+            if (keyCode == UiKey.HOME) { offset = 0; return true; }
+            if (keyCode == UiKey.END) { offset = max; return true; }
+            return super.key(keyCode);
+        }
     }
 
     public static final class Tooltip extends Node {
