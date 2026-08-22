@@ -8,12 +8,25 @@ package com.rethinkqaq.configui.minecraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Shared, opt-in demo gate used by the small loader-specific title hooks. */
+/** Shared demo gate used by the small loader-specific title hooks. */
 public final class DemoEntrypoint {
+    private static volatile boolean developmentDemoEnabled;
+
     private DemoEntrypoint() { }
 
+    /**
+     * Enables the bundled visual demo for a loader's local development run.
+     * Production packages never call this; they remain opt-in through the JVM
+     * properties handled by {@link #enabled()}.
+     */
+    public static void enableDevelopmentDemo() {
+        developmentDemoEnabled = true;
+    }
+
     public static boolean enabled() {
-        boolean enabled = Boolean.getBoolean("rethink_config_ui_lib_example") || Boolean.getBoolean("rethink_config_ui_lib.example");
+        boolean enabled = developmentDemoEnabled
+            || Boolean.getBoolean("rethink_config_ui_lib_example")
+            || Boolean.getBoolean("rethink_config_ui_lib.example");
         if (enabled) MinecraftSdfRenderer.prewarm();
         return enabled;
     }

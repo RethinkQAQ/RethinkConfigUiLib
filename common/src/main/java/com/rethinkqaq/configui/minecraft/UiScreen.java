@@ -42,7 +42,20 @@ public class UiScreen extends Screen {
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     //?}
         graphics.fill(0, 0, width, height, host.theme().palette().surface());
-        host.render(new MinecraftUiRenderer(graphics), width, height, mouseX, mouseY);
+        float contentScale = host.contentScale(Minecraft.getInstance().getWindow().getGuiScale());
+        //? if >=1.21.8 {
+        /*graphics.pose().pushMatrix();
+        graphics.pose().scale(contentScale, contentScale);
+        host.render(new MinecraftUiRenderer(graphics, contentScale), width, height,
+            Minecraft.getInstance().getWindow().getGuiScale(), mouseX, mouseY);
+        graphics.pose().popMatrix();
+        *///?} else {
+        graphics.pose().pushPose();
+        graphics.pose().scale(contentScale, contentScale, 1f);
+        host.render(new MinecraftUiRenderer(graphics, contentScale), width, height,
+            Minecraft.getInstance().getWindow().getGuiScale(), mouseX, mouseY);
+        graphics.pose().popPose();
+        //?}
     }
     //? if >=26.2 {
     /*@Override public void onClose() { minecraft.gui.setScreen(parent); }
@@ -51,20 +64,22 @@ public class UiScreen extends Screen {
     //?}
 
     //? if >=1.21.11 {
-    /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x(), event.y(), event.button()); }
-    @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x(), event.y(), event.button()); }
-    @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(mouseX, mouseY, event.button()); }
+    /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x() / contentScale(), event.y() / contentScale(), event.button()); }
+    @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x() / contentScale(), event.y() / contentScale(), event.button()); }
+    @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(event.x() / contentScale(), event.y() / contentScale(), event.button()); }
     @Override public boolean keyPressed(KeyEvent event) { return host.keyPressed(event.key(), event.modifiers()) || super.keyPressed(event); }
     *///?} else {
-    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) { return host.mouseClicked(mouseX, mouseY, button); }
-    @Override public boolean mouseReleased(double mouseX, double mouseY, int button) { return host.mouseReleased(mouseX, mouseY, button); }
-    @Override public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) { return host.mouseDragged(mouseX, mouseY, button); }
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) { return host.mouseClicked(mouseX / contentScale(), mouseY / contentScale(), button); }
+    @Override public boolean mouseReleased(double mouseX, double mouseY, int button) { return host.mouseReleased(mouseX / contentScale(), mouseY / contentScale(), button); }
+    @Override public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) { return host.mouseDragged(mouseX / contentScale(), mouseY / contentScale(), button); }
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return host.keyPressed(keyCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers); }
     //?}
 
     //? if <1.20.2 {
-    /*@Override public boolean mouseScrolled(double mouseX, double mouseY, double amount) { return host.mouseScrolled(mouseX, mouseY, amount); }
+    /*@Override public boolean mouseScrolled(double mouseX, double mouseY, double amount) { return host.mouseScrolled(mouseX / contentScale(), mouseY / contentScale(), amount); }
     *///?} else {
-    @Override public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) { return host.mouseScrolled(mouseX, mouseY, scrollY); }
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) { return host.mouseScrolled(mouseX / contentScale(), mouseY / contentScale(), scrollY); }
     //?}
+
+    private float contentScale() { return host.contentScale(Minecraft.getInstance().getWindow().getGuiScale()); }
 }

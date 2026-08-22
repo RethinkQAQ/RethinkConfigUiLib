@@ -75,13 +75,6 @@ val runJavaLauncher = javaToolchains.launcherFor {
 }
 tasks.withType<JavaExec>().configureEach {
     javaLauncher.set(runJavaLauncher)
-    // JavaExec does not inherit Gradle's -D properties automatically. Forward
-    // the opt-in RCUI demo switch to the actual Minecraft process.
-    listOf("rethink_config_ui_lib_example", "rethink_config_ui_lib.example").forEach { propertyName ->
-        providers.systemProperty(propertyName).orNull?.let { propertyValue ->
-            systemProperty(propertyName, propertyValue)
-        }
-    }
 }
 
 // Some loader plugins replace the executable of their Minecraft run tasks after
@@ -105,6 +98,21 @@ tasks.register("printRunJava") {
 
 repositories {
     mavenCentral()
+    // Fabric Loom may upgrade LWJGL when the Gradle JVM is Java 19+.
+    // Loom 1.15.x expects this exclusive repository to exist before its
+    // after-evaluation Minecraft setup runs. Register it up front so Gradle 9
+    // does not reject a late content mutation of the Mojang repository.
+    if (loader == null || loader == "fabric") {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "MavenCentralLWJGL"
+                    url = uri("https://repo1.maven.org/maven2")
+                }
+            }
+            filter { includeGroup("org.lwjgl") }
+        }
+    }
     maven("https://jitpack.io") {
         name = "JitPack"
         content { includeGroupByRegex("com\\.github\\..+") }
@@ -148,6 +156,17 @@ repositories {
     }
 }
 
+val resourcePackFormat = commonMod.propOrNull("resource_pack_format") ?: "15"
+val usesMinorResourcePackFormat = commonMod.mc.let { version ->
+    val parts = version.split('.').map(String::toInt)
+    parts[0] >= 26 || (parts[0] == 1 && parts[1] == 21 && parts[2] >= 11)
+}
+val resourcePackMetadata = if (usesMinorResourcePackFormat) {
+    "\"min_format\": [$resourcePackFormat, 0],\n        \"max_format\": [$resourcePackFormat, 0]"
+} else {
+    "\"pack_format\": $resourcePackFormat"
+}
+
 tasks.processResources {
     val values = mapOf(
         "modId" to commonMod.id,
@@ -159,6 +178,7 @@ tasks.processResources {
         "modLicense" to commonMod.license,
         "modGitHub" to commonMod.github,
         "minecraftVersion" to commonMod.mc,
+        "resourcePackMetadata" to resourcePackMetadata,
         "javaVersion" to configuredJavaVersion.toString(),
         "mixinCompatibilityLevel" to mixinCompatibilityLevel,
         "minecraftVersionRangeFabric" to (commonMod.propOrNull("minecraft_version_range_fabric") ?: ""),
@@ -170,7 +190,8 @@ tasks.processResources {
     )
     val jsonValues = values.mapValues { (_, value) -> value.replace("\n", "\\n") }
     filesMatching(listOf("META-INF/mods.toml", "META-INF/neoforge.mods.toml")) { expand(values) }
-    filesMatching(listOf("pack.mcmeta", "fabric.mod.json", "*.mixins.json")) { expand(jsonValues) }
+    filesMatching(listOf("fabric.mod.json", "*.mixins.json")) { expand(jsonValues) }
+    filesMatching("pack.mcmeta") { expand(values) }
     inputs.properties(values)
 }
 tasks.named("processResources") { dependsOn(stonecutterGenerateTask) }

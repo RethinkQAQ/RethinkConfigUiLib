@@ -48,10 +48,16 @@ extensions.getByName("minecraft").withGroovyBuilder {
     "runs" {
         fun registerRun(name: String) {
             "create"(name) {
-                "systemProperties"(mapOf(
-                    "forge.logging.markers" to "SCAN,REGISTRIES,REGISTRYDUMP",
-                    "forge.logging.console.level" to "debug"
-                ))
+                val systemProperties = mutableMapOf(
+                    // Keep local runs readable; registry dumps are only useful
+                    // when explicitly diagnosing Forge data loading.
+                    "forge.logging.console.level" to "info",
+                    // ForgeGradle 7 applies this to its Slime Launcher run
+                    // options when `runClient` executes. Released jars do not
+                    // carry this development-only demo flag.
+                    "rethink_config_ui_lib_example" to "true"
+                )
+                "systemProperties"(systemProperties)
                 setProperty("workingDir", project.file("run"))
                 setProperty("client", name == "client")
                 "mods" {
@@ -81,16 +87,6 @@ jarJar.register {
     archiveClassifier = if (legacyObfuscation) "slim" else null
 }
 val jarJarTask = tasks.named<JarJar>("jarJar")
-
-// Forge's development runs load the registered source set rather than the final
-// JarJar archive, so core must be an output directory of the source set itself.
-val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
-sourceSets.named("main") {
-    output.dir(coreClasses)
-}
-tasks.named("classes") {
-    dependsOn(":core:classes")
-}
 
 if (legacyObfuscation) {
     val renamerExtension = extensions.getByType<RenamerExtension>()
@@ -128,6 +124,21 @@ if (legacyObfuscation) {
 
 tasks.jar {
     archiveClassifier = "slim"
+}
+
+// ForgeGradle 7's userdev locator registers the resources directory as the
+// development mod file, but does not scan the corresponding classes directory
+// when the sources come from Stonecutter-generated trees. For the local Forge
+// run only, put the resources beside the compiled classes. Keeping one output
+// directory prevents Forge's module layer from seeing a split package ("main"
+// plus the mod file).
+val forgeCompileClasses = layout.buildDirectory.dir("classes/java/main")
+sourceSets["main"].output.setResourcesDir(forgeCompileClasses)
+val prepareForgeDevMod = tasks.register("prepareForgeDevMod") {
+    dependsOn("classes", "processResources")
+}
+tasks.matching { it.name in setOf("runClient", "runServer") }.configureEach {
+    dependsOn(prepareForgeDevMod)
 }
 
 // The Maven publication intentionally replaces the Java component's slim jar

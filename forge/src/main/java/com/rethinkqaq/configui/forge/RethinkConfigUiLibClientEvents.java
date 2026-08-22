@@ -8,28 +8,42 @@ package com.rethinkqaq.configui.forge;
 import com.rethinkqaq.configui.minecraft.DemoEntrypoint;
 import com.rethinkqaq.configui.minecraft.FlatDemoButton;
 import com.rethinkqaq.configui.minecraft.RethinkConfigUiLib;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
-//? if >=1.21.8 {
-/*import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-*///?} else {
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-//?}
-import net.minecraftforge.fml.common.Mod;
 
-/** Adds a button to vanilla's title screen; it never substitutes that screen. */
-@Mod.EventBusSubscriber(modid = RethinkConfigUiLib.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+/** Adds the development demo entry after vanilla has initialized the title screen. */
 public final class RethinkConfigUiLibClientEvents {
+    private static final int DEMO_BUTTON_X = 6;
+    private static final int DEMO_BUTTON_Y = 6;
+    private static final int DEMO_BUTTON_WIDTH = 200;
+    private static final int DEMO_BUTTON_HEIGHT = 24;
+
     private RethinkConfigUiLibClientEvents() { }
 
-    @SubscribeEvent
     public static void addDemoButton(ScreenEvent.Init.Post event) {
-        if (!DemoEntrypoint.enabled() || !(event.getScreen() instanceof TitleScreen)) return;
-        int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        event.addListener(new FlatDemoButton(width / 2 - 100, Math.min(height - 35, height / 4 + 180), 200, 24,
-            () -> DemoEntrypoint.open(event.getScreen())));
+        Screen screen = event.getScreen();
+        if (!DemoEntrypoint.enabled() || !(screen instanceof TitleScreen)) return;
+
+        // Keep the shared RCUI button in the top-left corner, outside the
+        // centered logo and vanilla title actions at every GUI scale.
+        event.addListener(new FlatDemoButton(DEMO_BUTTON_X, DEMO_BUTTON_Y,
+            DEMO_BUTTON_WIDTH, DEMO_BUTTON_HEIGHT, () -> DemoEntrypoint.open(screen)));
+        RethinkConfigUiLib.LOGGER.info(
+            "RCUI Forge title demo entry added at ({}, {}, {}, {})",
+            DEMO_BUTTON_X,
+            DEMO_BUTTON_Y,
+            DEMO_BUTTON_WIDTH,
+            DEMO_BUTTON_HEIGHT
+        );
     }
+
+    // Forge 1.21.8+ exposes a typed bus for each screen event. Older nodes
+    // register the same listener on MinecraftForge.EVENT_BUS in the mod entrypoint.
+    //? if >=1.21.8 {
+    /*
+    public static void register() {
+        ScreenEvent.Init.Post.BUS.addListener(RethinkConfigUiLibClientEvents::addDemoButton);
+    }
+    *///?}
 }

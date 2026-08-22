@@ -23,6 +23,7 @@ public final class DemoScreen extends UiScreen {
 
     public DemoScreen(Screen parent) {
         super(parent, page(), UiTheme.roseLight(), UiHost.LayoutMode.FULLSCREEN);
+        host().scalePolicy(UiScalePolicy.adaptive());
     }
 
     private static Ui.Node page() {
@@ -73,7 +74,9 @@ public final class DemoScreen extends UiScreen {
                 UiText.literal("The host decides when and how values are persisted.")));
 
         Ui.Column settings = Ui.column().gap(18);
-        settings.add(Ui.label(UiText.literal("A responsive configuration page: compact windows stack controls; wide windows keep them aligned.")))
+        settings.add(Ui.tooltip(
+                Ui.label(UiText.literal("A responsive configuration page: compact windows stack controls; wide windows keep them aligned.")),
+                UiText.literal("Hover this line to preview an RCUI tooltip. The host may replace the text with a localized description.")))
             .add(general)
             .add(Ui.grid().minimumColumnWidth(220).gap(14)
                 .add(Ui.previewCard(UiText.literal("LIVE PREVIEW"), previewContent)
@@ -87,7 +90,8 @@ public final class DemoScreen extends UiScreen {
         return Ui.scaffold(Ui.scrollView(settings))
             .header(header)
             .sidebar(Ui.section(UiText.literal("NAVIGATION")).add(navigation))
-            .sidebarWidth(144);
+            .sidebarWidth(144)
+            .maxContentWidth(1080);
     }
 
     private static <T> UiBinding<T> binding(java.util.function.Supplier<T> getter, java.util.function.Consumer<T> setter) {

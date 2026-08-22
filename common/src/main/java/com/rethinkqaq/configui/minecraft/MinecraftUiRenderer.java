@@ -25,18 +25,26 @@ public final class MinecraftUiRenderer implements UiRenderer {
     private final GuiGraphics graphics;
     //?}
     private final Font font;
+    private final float coordinateScale;
 
     //? if >=26.1 {
     /*public MinecraftUiRenderer(GuiGraphicsExtractor graphics) {
+        this(graphics, 1f);
+    }
+    public MinecraftUiRenderer(GuiGraphicsExtractor graphics, float coordinateScale) {
     *///?} else {
     public MinecraftUiRenderer(GuiGraphics graphics) {
+        this(graphics, 1f);
+    }
+    public MinecraftUiRenderer(GuiGraphics graphics, float coordinateScale) {
     //?}
         this.graphics = graphics;
         this.font = Minecraft.getInstance().font;
+        this.coordinateScale = coordinateScale;
     }
 
     @Override public void fillRoundRect(UiBounds box, float radius, int color) {
-        if (MinecraftSdfRenderer.fill(graphics, box, radius, color)) return;
+        if (MinecraftSdfRenderer.fill(graphics, box, radius, color, coordinateScale)) return;
         int x = Math.round(box.x()), y = Math.round(box.y()), width = Math.round(box.width()), height = Math.round(box.height());
         int inset = Math.min(Math.round(radius), Math.min(width, height) / 2);
         graphics.fill(x + inset, y, x + width - inset, y + height, color);
@@ -49,7 +57,7 @@ public final class MinecraftUiRenderer implements UiRenderer {
     }
 
     @Override public void strokeRoundRect(UiBounds box, float radius, float width, int color) {
-        if (MinecraftSdfRenderer.stroke(graphics, box, radius, width, color)) return;
+        if (MinecraftSdfRenderer.stroke(graphics, box, radius, width, color, coordinateScale)) return;
         int x = Math.round(box.x()), y = Math.round(box.y());
         int right = Math.round(box.x() + box.width()), bottom = Math.round(box.y() + box.height());
         int boxWidth = right - x, boxHeight = bottom - y;
@@ -101,8 +109,38 @@ public final class MinecraftUiRenderer implements UiRenderer {
     //?}
     @Override public float textWidth(UiText text) { return font.width(component(text)); }
     @Override public float lineHeight() { return font.lineHeight; }
-    @Override public void pushClip(UiBounds box) { graphics.enableScissor(Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height())); }
+    //? if >=1.21.8 {
+    /*@Override public void pushClip(UiBounds box) {
+        enableScissorWithAntialiasMargin(box);
+    }
+    *///?} else {
+    @Override public void pushClip(UiBounds box) {
+        enableScissorWithAntialiasMargin(box);
+    }
+    //?}
     @Override public void popClip() { graphics.disableScissor(); }
+
+    /**
+     * GuiGraphics transforms scissor coordinates by the current UI pose.  Keep one physical
+     * pixel of margin so SDF/text antialias pixels at a rounded edge are not discarded by an
+     * inclusive/exclusive integer conversion (especially when adaptive scaling is below 1).
+     */
+    private void enableScissorWithAntialiasMargin(UiBounds box) {
+        float margin = 1f / Math.max(.25f, coordinateScale);
+        //? if >=1.21.8 {
+        /*// GuiGraphicsExtractor transforms the rectangle by its current pose.
+        graphics.enableScissor(Math.round(box.x() - margin), Math.round(box.y() - margin),
+            Math.round(box.x() + box.width() + margin),
+            Math.round(box.y() + box.height() + margin));
+        *///?} else {
+        // DrawContext (1.20.x-1.21.4) keeps scissor coordinates in screen space and does not
+        // transform them by the pose, so apply the UI scale explicitly here.
+        graphics.enableScissor(Math.round((box.x() - margin) * coordinateScale),
+            Math.round((box.y() - margin) * coordinateScale),
+            Math.round((box.x() + box.width() + margin) * coordinateScale),
+            Math.round((box.y() + box.height() + margin) * coordinateScale));
+        //?}
+    }
 
     //? if >=26.1 {
     /*void renderPreview(MinecraftPreview.Renderer callback, UiBounds bounds) { callback.render(graphics, bounds); }

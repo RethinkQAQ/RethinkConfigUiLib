@@ -21,9 +21,9 @@ val commonResources = configurations.resolvable("commonResources") {
 
 dependencies {
     compileOnly(project(commonPath))
-    // The common adapter is merged into the production platform jar, but the
-    // development client still needs it on its runtime classpath.
-    runtimeOnly(project(commonPath))
+    // The common adapter is compiled into this loader's output by compileJava.
+    // Do not add the common project jar to runtime: Forge 1.21.1 treats that
+    // jar as a named module, creating a split package with main at launch.
     val commonJavaProject = project.dependencies.project(commonPath)
     val commonResourcesProject = project.dependencies.project(commonPath)
     add(commonJavaDependencies.name, commonJavaProject)

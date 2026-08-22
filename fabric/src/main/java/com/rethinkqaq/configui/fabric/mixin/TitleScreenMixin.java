@@ -24,7 +24,7 @@ abstract class TitleScreenMixin extends Screen {
     @Inject(method = "init", at = @At("TAIL"))
     private void rethinkConfigUiLib$addDemoButton(CallbackInfo callbackInfo) {
         if (DemoEntrypoint.enabled()) {
-            addRenderableWidget(rethinkConfigUiLib$createButton((Screen) (Object) this, width / 2 - 100, Math.min(height - 35, height / 4 + 180)));
+            addRenderableWidget(rethinkConfigUiLib$createButton((Screen) (Object) this, 6, 6));
         }
     }
 

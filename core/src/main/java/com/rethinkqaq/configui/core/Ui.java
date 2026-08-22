@@ -36,13 +36,11 @@ public final class Ui {
     public static ScrollView scrollView(Node child) { return new ScrollView(child); }
     public static Tooltip tooltip(Node child, UiText text) { return new Tooltip(child, text); }
 
-    /** Draws one line without allowing it to paint outside the supplied width. */
+    /** Draws one line, fitting literal text with an ellipsis before rendering. */
     public static void drawFittedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth, int color) {
         if (maxWidth <= 0) return;
         UiText displayed = fitted(renderer, text, maxWidth);
-        renderer.pushClip(new UiBounds(x, y, maxWidth, renderer.lineHeight()));
         renderer.drawText(displayed, x, y, color);
-        renderer.popClip();
     }
 
     private static UiText fitted(UiRenderer renderer, UiText text, float maxWidth) {

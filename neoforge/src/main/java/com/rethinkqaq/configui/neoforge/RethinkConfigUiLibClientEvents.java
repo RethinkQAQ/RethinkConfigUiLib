@@ -7,7 +7,6 @@ package com.rethinkqaq.configui.neoforge;
 
 import com.rethinkqaq.configui.minecraft.DemoEntrypoint;
 import com.rethinkqaq.configui.minecraft.FlatDemoButton;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 
@@ -17,9 +16,7 @@ public final class RethinkConfigUiLibClientEvents {
 
     public static void addDemoButton(ScreenEvent.Init.Post event) {
         if (!DemoEntrypoint.enabled() || !(event.getScreen() instanceof TitleScreen)) return;
-        int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        event.addListener(new FlatDemoButton(width / 2 - 100, Math.min(height - 35, height / 4 + 180), 200, 24,
+        event.addListener(new FlatDemoButton(6, 6, 200, 24,
             () -> DemoEntrypoint.open(event.getScreen())));
     }
 }

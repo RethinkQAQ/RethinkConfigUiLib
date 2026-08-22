@@ -32,6 +32,30 @@ minecraft.setScreen(new UiScreen(previousScreen, page, UiTheme.roseLight()));
 render, mouse, scroll and keyboard callbacks to the host. Bindings write their
 new value immediately; persistence remains the responsibility of the host mod.
 
+### GUI Scale policy
+
+`UiScreen` respects the player's Minecraft GUI Scale by default. A standalone
+configuration page can instead keep its controls and original-font text near a
+chosen physical size without changing the player's option:
+
+```java
+var screen = new UiScreen(previousScreen, page, UiTheme.roseLight());
+screen.host().scalePolicy(UiScalePolicy.adaptive()); // Reference: Minecraft GUI Scale 4
+minecraft.setScreen(screen);
+```
+
+The built-in demo uses this policy. For a different visual baseline, provide a
+bounded custom policy:
+
+```java
+screen.host().scalePolicy(UiScalePolicy.builder(3f)
+    .minimumContentScale(.75f)
+    .maximumContentScale(2.5f)
+    .build());
+```
+
+Use `UiScalePolicy.minecraft()` to retain strict vanilla GUI-scale behaviour.
+
 ## Build and local Maven
 
 Build one target, then publish it locally:
@@ -86,20 +110,20 @@ bootstraps: it registers no content, events, Mixins, or Screen replacements.
 
 ## Built-in demo
 
-The platform JAR contains an opt-in visual smoke-test screen. Add this JVM
-argument to the client run configuration:
+The platform JAR contains a visual smoke-test screen for development. Gradle
+automatically passes this property to every `runClient` task:
 
 ```text
 -Drethink_config_ui_lib_example=true
 ```
 
-With the flag present, Fabric, Forge, and NeoForge add an `RCUI Demo` button to
-the vanilla title screen. The demo opens only after that button is clicked.
-Without the flag, the library remains inert and does not replace any Minecraft
-screen. The demo is part of the platform JAR only as a development aid; it is
-not shown by default and has no configuration persistence. The code also
-accepts the dotted property name for hosts that pass JVM properties directly
-rather than through Gradle.
+Fabric, Forge, and NeoForge therefore add an `RCUI Demo` button to the vanilla
+title screen when launched from the development `runClient` task. The demo
+opens only after that button is clicked. To disable it for a development run,
+put `-Drethink_config_ui_lib_example=false` before the Gradle task name. The
+platform JAR remains inert for normal mod use and does not replace any
+Minecraft screen. The code also accepts the dotted property name for hosts
+that pass JVM properties directly rather than through Gradle.
 
 ## Verification
 

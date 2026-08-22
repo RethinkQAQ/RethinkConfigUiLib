@@ -42,6 +42,10 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.client.Minecraft;
+*///?}
+//? if >=1.21.8 && <26.2 {
+/*import com.mojang.blaze3d.shaders.UniformType;
 *///?}
 //? if >=1.21.8 && <1.21.11 {
 /*import com.mojang.blaze3d.platform.DepthTestFunction;
@@ -53,6 +57,12 @@ import net.minecraft.resources.Identifier;
 *///?}
 //? if >=26.1 {
 /*import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
+import com.mojang.blaze3d.shaders.ShaderSource;
+import com.mojang.blaze3d.shaders.ShaderType;
+import com.mojang.blaze3d.systems.RenderSystem;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
@@ -61,6 +71,7 @@ import net.minecraft.client.gui.GuiGraphics;
 //?}
 //? if >=26.2 {
 /*import com.mojang.blaze3d.PrimitiveTopology;
+import net.minecraft.client.renderer.BindGroupLayouts;
 *///?}
 
 /** Version-adapted native signed-distance rounded rectangle renderer. */
@@ -122,8 +133,8 @@ final class MinecraftSdfRenderer {
     private static ShaderInstance shader;
     private static boolean unavailable;
     private static boolean warned;
-    static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
+    static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
     static void invalidate() { shader = null; unavailable = false; }
     private static ShaderInstance shader() {
         if (unavailable) return null;
@@ -163,8 +174,8 @@ final class MinecraftSdfRenderer {
     //? if >=1.21.4 && <1.21.8 {
     /*private static final ShaderProgram PROGRAM = new ShaderProgram(ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf"), DefaultVertexFormat.POSITION_COLOR, ShaderDefines.EMPTY);
     private static boolean warned;
-    static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
+    static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
     static void invalidate() { }
     private static void warn(Exception exception) {
         if (!warned) { warned = true; RethinkConfigUiLib.LOGGER.warn("RCUI SDF renderer could not initialize; using the safe rounded fallback: {}", exception.toString()); }
@@ -172,10 +183,10 @@ final class MinecraftSdfRenderer {
     *///?}
 
     //? if <1.21.1 {
-    /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
+    /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         ShaderInstance active = shader(); if (active == null || box.width() <= 0 || box.height() <= 0) return false;
         try {
-            double scale = Minecraft.getInstance().getWindow().getGuiScale();
+            double scale = Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale;
             active.getUniform("SdfBounds").set((float) (box.x() * scale), (float) (Minecraft.getInstance().getWindow().getHeight() - (box.y() + box.height()) * scale), (float) (box.width() * scale), (float) (box.height() * scale));
             active.getUniform("SdfStyle").set(radius * (float) scale, stroke * (float) scale, outline ? 1f : 0f, 0f);
             RenderSystem.enableBlend(); RenderSystem.defaultBlendFunc(); RenderSystem.setShader(() -> active);
@@ -188,10 +199,10 @@ final class MinecraftSdfRenderer {
     *///?}
 
     //? if >=1.21.1 && <1.21.4 {
-    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
+    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         ShaderInstance active = shader(); if (active == null || box.width() <= 0 || box.height() <= 0) return false;
         try {
-            double scale = Minecraft.getInstance().getWindow().getGuiScale();
+            double scale = Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale;
             active.getUniform("SdfBounds").set((float) (box.x() * scale), (float) (Minecraft.getInstance().getWindow().getHeight() - (box.y() + box.height()) * scale), (float) (box.width() * scale), (float) (box.height() * scale));
             active.getUniform("SdfStyle").set(radius * (float) scale, stroke * (float) scale, outline ? 1f : 0f, 0f);
             RenderSystem.enableBlend(); RenderSystem.defaultBlendFunc(); RenderSystem.setShader(() -> active);
@@ -204,11 +215,11 @@ final class MinecraftSdfRenderer {
     //?}
 
     //? if >=1.21.4 && <1.21.8 {
-    /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
+    /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         if (box.width() <= 0 || box.height() <= 0) return true;
         try {
             CompiledShaderProgram active = Minecraft.getInstance().getShaderManager().getProgramForLoading(PROGRAM);
-            double scale = Minecraft.getInstance().getWindow().getGuiScale();
+            double scale = Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale;
             active.getUniform("SdfBounds").set((float) (box.x() * scale), (float) (Minecraft.getInstance().getWindow().getHeight() - (box.y() + box.height()) * scale), (float) (box.width() * scale), (float) (box.height() * scale));
             active.getUniform("SdfStyle").set(radius * (float) scale, stroke * (float) scale, outline ? 1f : 0f, 0f);
             RenderSystem.enableBlend(); RenderSystem.defaultBlendFunc(); RenderSystem.setShader(active);
@@ -223,82 +234,115 @@ final class MinecraftSdfRenderer {
     //? if >=1.21.8 {
     /*private static final Map<PipelineKey, RenderPipeline> PIPELINES = new HashMap<>();
     private static boolean warned;
-    static void invalidate() { }
+    private static boolean unavailable;
+    static void invalidate() { PIPELINES.clear(); unavailable = false; }
     private record PipelineKey(int radius, int stroke, boolean outline) { }
+    private static PipelineKey pipelineKey(float radius, float stroke, boolean outline, float coordinateScale) {
+        float pixelScale = (float) (Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale);
+        return new PipelineKey(Math.round(radius * pixelScale), Math.round(stroke * pixelScale), outline);
+    }
     private static void warn(Exception exception) {
         if (!warned) { warned = true; RethinkConfigUiLib.LOGGER.warn("RCUI SDF pipeline submission failed; using the safe rounded fallback: {}", exception.toString()); }
     }
     *///?}
 
     //? if >=1.21.8 && <1.21.11 {
-    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
-    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
+    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         if (box.width() <= 0 || box.height() <= 0) return true;
         try {
-            graphics.fill(PIPELINES.computeIfAbsent(new PipelineKey(Math.round(radius), Math.round(stroke), outline), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+            graphics.fill(PIPELINES.computeIfAbsent(pipelineKey(radius, stroke, outline, coordinateScale), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
             return true;
         } catch (RuntimeException exception) { warn(exception); return false; }
     }
     private static RenderPipeline pipeline(PipelineKey key) {
-        int radius = Math.max(0, Math.min(127, key.radius())), stroke = Math.max(0, Math.min(31, key.stroke()));
-        ResourceLocation base = ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "rcui_sdf_pipeline");
+        int radius = Math.max(0, Math.min(2048, key.radius())), stroke = Math.max(0, Math.min(512, key.stroke()));
+        ResourceLocation base = ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_pipeline");
         ResourceLocation location = ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + radius + "_" + stroke + "_" + (key.outline() ? "stroke" : "fill"));
-        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withBlend(BlendFunction.TRANSLUCENT).withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
+        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER).withUniform("Projection", UniformType.UNIFORM_BUFFER).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withBlend(BlendFunction.TRANSLUCENT).withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
     }
     *///?}
 
     //? if >=1.21.11 && <26.1 {
-    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
-    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
+    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         if (box.width() <= 0 || box.height() <= 0) return true;
         try {
-            graphics.fill(PIPELINES.computeIfAbsent(new PipelineKey(Math.round(radius), Math.round(stroke), outline), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+            graphics.fill(PIPELINES.computeIfAbsent(pipelineKey(radius, stroke, outline, coordinateScale), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
             return true;
         } catch (RuntimeException exception) { warn(exception); return false; }
     }
     private static RenderPipeline pipeline(PipelineKey key) {
-        int radius = Math.max(0, Math.min(127, key.radius())), stroke = Math.max(0, Math.min(31, key.stroke()));
-        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "rcui_sdf_pipeline");
+        int radius = Math.max(0, Math.min(2048, key.radius())), stroke = Math.max(0, Math.min(512, key.stroke()));
+        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_pipeline");
         Identifier location = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + radius + "_" + stroke + "_" + (key.outline() ? "stroke" : "fill"));
-        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withBlend(BlendFunction.TRANSLUCENT).withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
+        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER).withUniform("Projection", UniformType.UNIFORM_BUFFER).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withBlend(BlendFunction.TRANSLUCENT).withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
     }
     *///?}
 
     //? if >=26.1 && <26.2 {
-    /*static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
-    private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
-        if (box.width() <= 0 || box.height() <= 0) return true;
+    /*static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
+        if (unavailable || box.width() <= 0 || box.height() <= 0) return !unavailable;
         try {
-            graphics.fill(PIPELINES.computeIfAbsent(new PipelineKey(Math.round(radius), Math.round(stroke), outline), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+            PipelineKey key = pipelineKey(radius, stroke, outline, coordinateScale);
+            RenderPipeline pipeline = PIPELINES.computeIfAbsent(key, MinecraftSdfRenderer::pipeline);
+            CompiledRenderPipeline compiled = RenderSystem.getDevice().precompilePipeline(pipeline);
+            if (!compiled.isValid()) {
+                PIPELINES.remove(key, pipeline);
+                unavailable = true;
+                warn(new IllegalStateException("RCUI SDF pipeline compilation failed"));
+                return false;
+            }
+            graphics.fill(pipeline, Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
             return true;
-        } catch (RuntimeException exception) { warn(exception); return false; }
+        } catch (RuntimeException exception) { unavailable = true; warn(exception); return false; }
     }
     private static RenderPipeline pipeline(PipelineKey key) {
-        int radius = Math.max(0, Math.min(127, key.radius())), stroke = Math.max(0, Math.min(31, key.stroke()));
-        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "rcui_sdf_pipeline");
+        int radius = Math.max(0, Math.min(2048, key.radius())), stroke = Math.max(0, Math.min(512, key.stroke()));
+        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_pipeline");
         Identifier location = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + radius + "_" + stroke + "_" + (key.outline() ? "stroke" : "fill"));
-        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT)).withDepthStencilState(Optional.empty()).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
+        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER).withUniform("Projection", UniformType.UNIFORM_BUFFER).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT)).withDepthStencilState(Optional.empty()).withCull(false).withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
     }
     *///?}
 
     //? if >=26.2 {
-    /*static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color) { return draw(graphics, box, radius, 0f, color, false); }
-    static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color) { return draw(graphics, box, radius, width, color, true); }
-    private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline) {
-        if (box.width() <= 0 || box.height() <= 0) return true;
+    /*static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
+        if (unavailable || box.width() <= 0 || box.height() <= 0) return !unavailable;
         try {
-            graphics.fill(PIPELINES.computeIfAbsent(new PipelineKey(Math.round(radius), Math.round(stroke), outline), MinecraftSdfRenderer::pipeline), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+            PipelineKey key = pipelineKey(radius, stroke, outline, coordinateScale);
+            RenderPipeline pipeline = PIPELINES.computeIfAbsent(key, MinecraftSdfRenderer::pipeline);
+            CompiledRenderPipeline compiled = RenderSystem.getDevice().precompilePipeline(pipeline, MinecraftSdfRenderer::shaderSource);
+            if (!compiled.isValid()) {
+                PIPELINES.remove(key, pipeline);
+                unavailable = true;
+                warn(new IllegalStateException("RCUI SDF pipeline compilation failed"));
+                return false;
+            }
+            graphics.fill(pipeline, Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
             return true;
-        } catch (RuntimeException exception) { warn(exception); return false; }
+        } catch (RuntimeException exception) { unavailable = true; warn(exception); return false; }
     }
     private static RenderPipeline pipeline(PipelineKey key) {
-        int radius = Math.max(0, Math.min(127, key.radius())), stroke = Math.max(0, Math.min(31, key.stroke()));
-        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "rcui_sdf_pipeline");
+        int radius = Math.max(0, Math.min(2048, key.radius())), stroke = Math.max(0, Math.min(512, key.stroke()));
+        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_pipeline");
         Identifier location = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + radius + "_" + stroke + "_" + (key.outline() ? "stroke" : "fill"));
-        return RenderPipeline.builder().withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT)).withDepthStencilState(Optional.empty()).withCull(false).withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR).withPrimitiveTopology(PrimitiveTopology.QUADS).build();
+        return RenderPipeline.builder().withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION).withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT)).withDepthStencilState(Optional.empty()).withCull(false).withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR).withPrimitiveTopology(PrimitiveTopology.QUADS).build();
+    }
+    private static String shaderSource(Identifier ignored, ShaderType type) {
+        String suffix = type == ShaderType.VERTEX ? ".vsh" : ".fsh";
+        String resource = "/assets/rethink_config_ui_lib/shaders/core/rcui_sdf_pipeline" + suffix;
+        try (InputStream stream = MinecraftSdfRenderer.class.getResourceAsStream(resource)) {
+            if (stream == null) return null;
+            return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            return null;
+        }
     }
     *///?}
 }
