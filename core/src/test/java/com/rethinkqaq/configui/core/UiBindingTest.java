@@ -178,6 +178,49 @@ class UiBindingTest {
     }
 
     @Test
+    void topNavigationKeepsContentBelowOptionalRegions() {
+        UiPageHost pages = Ui.pageHost()
+            .addPage(UiText.literal("General"), Ui.column().add(Ui.label(UiText.literal("General content"))))
+            .addPage(UiText.literal("Preview"), Ui.column().add(Ui.label(UiText.literal("Preview content"))));
+        Ui.Node header = Ui.panel().add(Ui.label(UiText.literal("Header")));
+        UiScaffold scaffold = Ui.scaffold(pages).header(header).navigation(pages.navigation())
+            .navigationMode(UiScaffold.NavigationMode.TOP).regionGap(8);
+        scaffold.measure(RENDERER, 300, 120, UiTheme.roseLight());
+        scaffold.layout(RENDERER, new UiBounds(0, 0, 300, 120), UiTheme.roseLight());
+        assertTrue(pages.navigation().bounds().y() >= header.bounds().y() + header.bounds().height() + 8);
+        assertTrue(pages.bounds().y() >= pages.navigation().bounds().y() + pages.navigation().bounds().height() + 8);
+        assertTrue(pages.bounds().height() >= 0);
+    }
+
+    @Test
+    void pageHostSwitchesContentAndResetsScroll() {
+        Ui.Column first = Ui.column();
+        for (int index = 0; index < 8; index++) first.add(Ui.label(UiText.literal("Line" + index)));
+        UiPageHost pages = Ui.pageHost().addPage(UiText.literal("First"), first)
+            .addPage(UiText.literal("Second"), Ui.label(UiText.literal("Second page")));
+        pages.measure(RENDERER, 100, 20, UiTheme.roseLight());
+        pages.layout(RENDERER, new UiBounds(0, 0, 100, 20), UiTheme.roseLight());
+        assertTrue(pages.currentPage().scroll(5, 5, -1));
+        pages.select(1);
+        assertEquals(1, pages.selectedIndex());
+        assertEquals(0, ((Ui.ScrollView) pages.currentPage()).offset());
+        assertTrue(pages.layoutVersion() > 0);
+    }
+
+    @Test
+    void navigationWrapsAtNarrowWidths() {
+        UiPageHost pages = Ui.pageHost()
+            .addPage(UiText.literal("General"), Ui.label(UiText.literal("A")))
+            .addPage(UiText.literal("Preview"), Ui.label(UiText.literal("B")))
+            .addPage(UiText.literal("Advanced"), Ui.label(UiText.literal("C")));
+        UiNavigationBar navigation = pages.navigation();
+        navigation.measure(RENDERER, 60, 100, UiTheme.roseLight());
+        navigation.layout(RENDERER, new UiBounds(0, 0, 60, navigation.measuredHeight()), UiTheme.roseLight());
+        assertTrue(navigation.measuredHeight() > RENDERER.lineHeight());
+        assertTrue(navigation.childNodes().get(0).bounds().width() <= 60);
+    }
+
+    @Test
     void disabledSettingRowDisablesItsControl() {
         Ui.Toggle control = Ui.toggle(UiText.literal(""), UiBinding.of(() -> false, value -> { }));
         UiSettingRow row = Ui.settingRow(UiText.literal("Feature"), control).enabled(false);

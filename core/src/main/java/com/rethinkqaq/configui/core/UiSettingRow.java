@@ -19,6 +19,8 @@ public final class UiSettingRow extends Ui.Node implements Ui.ChildProvider {
     private boolean compact;
     private float labelHeight;
     private float controlWidth;
+    private int labelLines;
+    private int descriptionLines;
 
     UiSettingRow(UiText label, Ui.Node control) {
         this.label = Objects.requireNonNull(label, "label");
@@ -41,19 +43,24 @@ public final class UiSettingRow extends Ui.Node implements Ui.ChildProvider {
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         compact = maxWidth < compactWidth;
-        labelHeight = renderer.lineHeight() + (description == null ? 0 : renderer.lineHeight() + theme.metrics().spacing() / 2f);
         if (compact) {
             control.measure(renderer, maxWidth, maxHeight, theme);
             controlWidth = maxWidth;
-            measuredWidth = maxWidth;
-            measuredHeight = labelHeight + theme.metrics().spacing() + control.measuredHeight();
+            labelLines = Ui.wrapLines(renderer, label, maxWidth, 3).size();
+            descriptionLines = description == null ? 0 : Ui.wrapLines(renderer, description, maxWidth, 3).size();
         } else {
             controlWidth = Math.min(Math.max(theme.metrics().controlHeight() * 3.5f, maxWidth * .38f), maxWidth * .5f);
             control.measure(renderer, controlWidth, maxHeight, theme);
             controlWidth = control.measuredWidth();
-            measuredWidth = maxWidth;
-            measuredHeight = Math.max(labelHeight, control.measuredHeight());
+            float textWidth = Math.max(0, maxWidth - controlWidth - theme.metrics().spacing());
+            labelLines = Ui.wrapLines(renderer, label, textWidth, 3).size();
+            descriptionLines = description == null ? 0 : Ui.wrapLines(renderer, description, textWidth, 3).size();
         }
+        labelHeight = renderer.lineHeight() * labelLines
+            + (descriptionLines == 0 ? 0 : descriptionLines * renderer.lineHeight() + theme.metrics().spacing() / 2f);
+        measuredWidth = maxWidth;
+        measuredHeight = compact ? labelHeight + theme.metrics().spacing() + control.measuredHeight()
+            : Math.max(labelHeight, control.measuredHeight());
     }
 
     @Override
@@ -73,9 +80,10 @@ public final class UiSettingRow extends Ui.Node implements Ui.ChildProvider {
         int primary = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         int secondary = enabled() ? theme.palette().textSecondary() : theme.palette().textDisabled();
         float textWidth = compact ? bounds.width() : Math.max(0, control.bounds().x() - bounds.x() - theme.metrics().spacing());
-        Ui.drawFittedText(renderer, label, bounds.x(), bounds.y(), textWidth, primary);
-        if (description != null) Ui.drawFittedText(renderer, description, bounds.x(),
-            bounds.y() + renderer.lineHeight() + theme.metrics().spacing() / 2f, textWidth, secondary);
+        Ui.drawWrappedText(renderer, label, bounds.x(), bounds.y(), textWidth, labelLines, primary, 0);
+        if (description != null) Ui.drawWrappedText(renderer, description, bounds.x(),
+            bounds.y() + renderer.lineHeight() * labelLines + theme.metrics().spacing() / 2f,
+            textWidth, descriptionLines, secondary, 0);
         control.render(renderer, theme);
     }
 
