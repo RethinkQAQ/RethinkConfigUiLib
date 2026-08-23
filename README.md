@@ -32,6 +32,23 @@ minecraft.setScreen(new UiScreen(previousScreen, page, UiTheme.roseLight()));
 render, mouse, scroll and keyboard callbacks to the host. Bindings write their
 new value immediately; persistence remains the responsibility of the host mod.
 
+### Core source layout
+
+The implementation is split by responsibility so layout work and control work
+can evolve independently:
+
+| Package | Owns | Depends on |
+| --- | --- | --- |
+| `core.layout` | flow, stacking, panels, sections and scrolling | `Ui.Node` / `Ui.Container` tree primitives |
+| `core.component` | labels, buttons, toggles, sliders, selects and tooltips | tree primitives and renderer/theme contracts |
+| `core` | tree primitives, renderer/theme contracts, bindings and compatibility facade | Java 17 only |
+
+`Ui.*` remains a source-compatible facade for existing hosts. New components
+should be added as a top-level class in the appropriate package, then exposed
+through `Ui` only when a concise factory or compatibility alias is useful. Do
+not put Minecraft or loader types in these packages; those belong in the
+version-specific `common` adapter.
+
 ### GUI Scale policy
 
 `UiScreen` respects the player's Minecraft GUI Scale by default. A standalone

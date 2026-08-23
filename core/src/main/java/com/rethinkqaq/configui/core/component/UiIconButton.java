@@ -16,20 +16,12 @@
  * You should have received a copy of the GNU Lesser General Public License along
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
-package com.rethinkqaq.configui.neoforge;
 
-import com.rethinkqaq.configui.minecraft.DemoEntrypoint;
-import com.rethinkqaq.configui.minecraft.FlatDemoButton;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.neoforged.neoforge.client.event.ScreenEvent;
+package com.rethinkqaq.configui.core.component;
 
-/** Adds a button to vanilla's title screen; it never substitutes that screen. */
-public final class RethinkConfigUiLibClientEvents {
-    private RethinkConfigUiLibClientEvents() { }
+import com.rethinkqaq.configui.core.UiText;
 
-    public static void addDemoButton(ScreenEvent.Init.Post event) {
-        if (!DemoEntrypoint.enabled() || !(event.getScreen() instanceof TitleScreen)) return;
-        event.addListener(new FlatDemoButton(6, 6, 200, 24,
-            () -> DemoEntrypoint.open(event.getScreen())));
-    }
+/** A button whose label is intended to be rendered as an icon or compact glyph. */
+public class UiIconButton extends UiButton {
+    public UiIconButton(UiText label, Runnable action) { super(label, action); }
 }

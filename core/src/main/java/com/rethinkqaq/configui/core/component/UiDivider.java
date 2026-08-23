@@ -16,20 +16,23 @@
  * You should have received a copy of the GNU Lesser General Public License along
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
-package com.rethinkqaq.configui.neoforge;
 
-import com.rethinkqaq.configui.minecraft.DemoEntrypoint;
-import com.rethinkqaq.configui.minecraft.FlatDemoButton;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.neoforged.neoforge.client.event.ScreenEvent;
+package com.rethinkqaq.configui.core.component;
 
-/** Adds a button to vanilla's title screen; it never substitutes that screen. */
-public final class RethinkConfigUiLibClientEvents {
-    private RethinkConfigUiLibClientEvents() { }
+import com.rethinkqaq.configui.core.Ui;
+import com.rethinkqaq.configui.core.UiRenderer;
+import com.rethinkqaq.configui.core.UiTheme;
 
-    public static void addDemoButton(ScreenEvent.Init.Post event) {
-        if (!DemoEntrypoint.enabled() || !(event.getScreen() instanceof TitleScreen)) return;
-        event.addListener(new FlatDemoButton(6, 6, 200, 24,
-            () -> DemoEntrypoint.open(event.getScreen())));
+/** A one-pixel semantic separator. */
+public class UiDivider extends Ui.Node {
+    @Override
+    protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+        measuredWidth = maxWidth;
+        measuredHeight = theme.metrics().borderWidth();
+    }
+
+    @Override
+    public void render(UiRenderer renderer, UiTheme theme) {
+        renderer.fillRoundRect(bounds, 0, theme.palette().border());
     }
 }

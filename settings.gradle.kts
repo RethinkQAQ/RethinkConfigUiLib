@@ -145,6 +145,7 @@ gradle.projectsLoaded {
         versions.map { version -> ":$platform:$version:build" }
     }
     val licenseTaskPaths = buildList {
+        add(":core:licenseCheck")
         supportedVersions.forEach { version -> add(":common:$version:licenseCheck") }
         platformVersions.forEach { (platform, versions) ->
             versions.forEach { version -> add(":$platform:$version:licenseCheck") }

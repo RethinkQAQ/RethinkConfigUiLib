@@ -1,40 +1,17 @@
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.JavaExec
-import org.gradle.kotlin.dsl.withGroovyBuilder
-import java.time.Year
 
 plugins {
     java
     idea
     `java-library`
     `maven-publish`
-    id("com.github.hierynomus.license")
+    id("license-conventions")
 }
 
 val stonecutterGenerateTask = ":common:${commonMod.prop("minecraft_version")}:stonecutterGenerate"
 val licenseFormat = tasks.named("licenseFormat") {
     dependsOn(stonecutterGenerateTask)
-}
-tasks.register("licenseCheck") {
-    group = "verification"
-    dependsOn("licenseMain")
-}
-tasks.withType<JavaCompile>().configureEach { dependsOn(licenseFormat) }
-
-extensions.getByName("license").withGroovyBuilder {
-    setProperty("header", rootProject.file("HEADER.txt"))
-    setProperty("skipExistingHeaders", true)
-    setProperty("ignoreFailures", false)
-    "include"("**/*.java")
-    "include"("**/*.kt")
-    "include"("**/*.kts")
-    "include"("**/*.groovy")
-    "include"("**/*.gradle")
-    "ext" {
-        setProperty("name", commonMod.name)
-        setProperty("author", commonMod.author)
-        setProperty("year", Year.now().value.toString())
-    }
 }
 
 val configuredJavaVersion = commonMod.mc.let { version ->
