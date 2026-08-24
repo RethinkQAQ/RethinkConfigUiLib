@@ -56,6 +56,11 @@ public final class MinecraftUiRenderer implements UiRenderer {
         this.coordinateScale = coordinateScale;
     }
 
+    @Override public void fillRect(UiBounds box, int color) {
+        graphics.fill(Math.round(box.x()), Math.round(box.y()),
+            Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+    }
+
     @Override public void fillRoundRect(UiBounds box, float radius, int color) {
         if (MinecraftSdfRenderer.fill(graphics, box, radius, color, coordinateScale)) return;
         int x = Math.round(box.x()), y = Math.round(box.y()), width = Math.round(box.width()), height = Math.round(box.height());

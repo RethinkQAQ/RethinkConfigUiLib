@@ -221,6 +221,7 @@ class UiConfigurationComponentsTest {
     }
 
     private static final UiRenderer RENDERER = new UiRenderer() {
+        @Override public void fillRect(UiBounds bounds, int color) { }
         @Override public void fillRoundRect(UiBounds bounds, float radius, int color) { }
         @Override public void strokeRoundRect(UiBounds bounds, float radius, float width, int color) { }
         @Override public void drawText(UiText text, float x, float y, int color) { }

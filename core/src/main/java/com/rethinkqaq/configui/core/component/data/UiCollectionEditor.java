@@ -102,7 +102,7 @@ public final class UiCollectionEditor<T> extends Ui.Node {
         private final Ui.IconButton add = Ui.iconButton(UiText.literal("+"), this::addDraft);
         private final Ui.Button done = Ui.button(UiText.literal("Done"), dialogs::close);
         private UiValidationResult validation = UiValidationResult.OK;
-        private float titleHeight, addWidth, footerHeight, bodyHeight;
+        private float titleHeight, addWidth, footerHeight, bodyHeight, listInset;
 
         private CollectionDialog() {
             if (addEditor instanceof UiTextField textField) textField.onSubmit(this::addDraft);
@@ -146,8 +146,10 @@ public final class UiCollectionEditor<T> extends Ui.Node {
             done.measure(renderer, innerWidth, maxHeight, theme);
             footerHeight = done.measuredHeight();
             float messageHeight = validation.severity() == UiValidationResult.Severity.OK ? 0 : renderer.lineHeight() + theme.metrics().spacing() / 2f;
+            float footerGap = theme.metrics().spacing() * 3f;
+            listInset = Math.max(2f, theme.metrics().spacing() / 2f);
             float fixed = padding * 2 + titleHeight + theme.metrics().spacing() + Math.max(add.measuredHeight(), addEditor.measuredHeight())
-                + messageHeight + theme.metrics().spacing() * 2 + footerHeight;
+                + messageHeight + footerGap + footerHeight;
             list.measure(renderer, innerWidth, Math.max(theme.metrics().controlHeight() * 2, maxHeight - fixed), theme);
             bodyHeight = list.measuredHeight();
             measuredWidth = Math.min(maxWidth, Math.max(220, innerWidth + padding * 2));
@@ -166,8 +168,9 @@ public final class UiCollectionEditor<T> extends Ui.Node {
             y += addHeight;
             if (validation.severity() != UiValidationResult.Severity.OK) y += renderer.lineHeight() + theme.metrics().spacing() / 2f;
             y += theme.metrics().spacing();
-            list.layout(renderer, new UiBounds(x, y, width, bodyHeight), theme);
-            done.layout(renderer, new UiBounds(x + width - done.measuredWidth(), value.y() + value.height() - padding - footerHeight, done.measuredWidth(), footerHeight), theme);
+            list.layout(renderer, new UiBounds(x, y, width, Math.max(0, bodyHeight - listInset)), theme);
+            float doneY = value.y() + value.height() - padding - footerHeight + theme.metrics().spacing() / 2f;
+            done.layout(renderer, new UiBounds(x + width - done.measuredWidth(), doneY, done.measuredWidth(), footerHeight), theme);
         }
         @Override public void render(UiRenderer renderer, UiTheme theme) {
             renderer.fillRoundRect(bounds, theme.metrics().cardRadius(), theme.palette().surfaceRaised());
@@ -182,8 +185,12 @@ public final class UiCollectionEditor<T> extends Ui.Node {
                     Math.max(0, bounds.width() - padding * 2), color);
             }
             list.render(renderer, theme);
+            float dividerY = list.bounds().y() + list.bounds().height() + theme.metrics().spacing() / 2f;
+            renderer.fillRect(new UiBounds(list.bounds().x(), dividerY, list.bounds().width(), 1f),
+                withAlpha(theme.palette().border(), 96));
             done.render(renderer, theme);
         }
+        private int withAlpha(int color, int alpha) { return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24); }
         @Override public List<Ui.Node> childNodes() { return List.of(addEditor, add, list, done); }
         @Override public boolean click(float x, float y, int button) { return done.click(x, y, button) || add.click(x, y, button) || addEditor.click(x, y, button) || list.click(x, y, button); }
         @Override public boolean scroll(float x, float y, double amount) { return list.scroll(x, y, amount); }
