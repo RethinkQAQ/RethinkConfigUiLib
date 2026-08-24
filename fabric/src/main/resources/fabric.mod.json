@@ -4,6 +4,7 @@
   "version": "${modVersion}",
   "name": "${modName}",
   "description": "${modDescription}",
+  "icon": "assets/rethink_config_ui_lib/icon.png",
   "authors": ["${modAuthor}"],
   "contact": {
     "sources": "https://github.com/${modGitHub}",

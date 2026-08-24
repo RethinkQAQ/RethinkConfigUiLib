@@ -9,6 +9,7 @@ issueTrackerURL="https://github.com/${modGitHub}/issues"
 modId="${modId}"
 version="${modVersion}"
 displayName="${modName}"
+logoFile="assets/rethink_config_ui_lib/icon.png"
 authors="${modAuthor}"
 description='''${modDescription}'''
 displayURL="https://github.com/${modGitHub}"
