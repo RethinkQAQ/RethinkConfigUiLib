@@ -32,12 +32,26 @@ import com.rethinkqaq.configui.core.component.UiSelect;
 import com.rethinkqaq.configui.core.component.UiSlider;
 import com.rethinkqaq.configui.core.component.UiToggle;
 import com.rethinkqaq.configui.core.component.UiTooltip;
+import com.rethinkqaq.configui.core.component.data.UiListEntryAdapter;
+import com.rethinkqaq.configui.core.component.data.UiCollectionEditor;
+import com.rethinkqaq.configui.core.component.data.UiSelectionList;
+import com.rethinkqaq.configui.core.component.feedback.UiAlert;
+import com.rethinkqaq.configui.core.component.feedback.UiFeedbackType;
+import com.rethinkqaq.configui.core.component.input.UiNumericField;
+import com.rethinkqaq.configui.core.component.input.UiFormField;
+import com.rethinkqaq.configui.core.component.input.UiSearchField;
+import com.rethinkqaq.configui.core.component.input.UiNumberControl;
+import com.rethinkqaq.configui.core.component.input.UiTextField;
 import com.rethinkqaq.configui.core.layout.UiColumn;
 import com.rethinkqaq.configui.core.layout.UiPanel;
 import com.rethinkqaq.configui.core.layout.UiRow;
 import com.rethinkqaq.configui.core.layout.UiScrollView;
 import com.rethinkqaq.configui.core.layout.UiSection;
 import com.rethinkqaq.configui.core.layout.UiStack;
+import com.rethinkqaq.configui.core.setting.UiNumberSpec;
+import com.rethinkqaq.configui.core.setting.UiListSetting;
+import com.rethinkqaq.configui.core.setting.UiSetting;
+import java.util.function.Supplier;
 
 /** Stock UI factories and compatibility aliases for the original {@code Ui.*} API. */
 public final class Ui {
@@ -54,9 +68,12 @@ public final class Ui {
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
     public static UiScaffold scaffold(Node content) { return new UiScaffold(content); }
+    public static UiDialogHost dialogHost() { return new UiDialogHost(); }
+    public static UiDialogHost dialogHost(Node root) { return new UiDialogHost(root); }
     public static UiPageHost pageHost() { return new UiPageHost(); }
     public static UiSplitLayout split(Node primary, Node secondary) { return new UiSplitLayout(primary, secondary); }
     public static UiSettingRow settingRow(UiText label, Node control) { return new UiSettingRow(label, control); }
+    public static UiFormField formField(UiText label, Node control) { return new UiFormField(label, control); }
     public static UiPreviewCard previewCard(UiText title, Node preview) { return new UiPreviewCard(title, preview); }
     public static Button button(UiText text, Runnable action) { return new Button(text, action); }
     public static IconButton iconButton(UiText label, Runnable action) { return new IconButton(label, action); }
@@ -65,6 +82,14 @@ public final class Ui {
     public static <T> Select<T> select(UiText text, UiBinding<T> binding, List<T> values, Function<T, UiText> labels) { return new Select<>(text, binding, values, labels); }
     public static ScrollView scrollView(Node child) { return new ScrollView(child); }
     public static Tooltip tooltip(Node child, UiText text) { return new Tooltip(child, text); }
+    public static UiTextField textField(UiBinding<String> binding) { return new UiTextField(binding); }
+    public static UiSearchField searchField(UiBinding<String> binding) { return new UiSearchField(binding); }
+    public static <T extends Number> UiNumericField<T> numericField(UiSetting<T> setting, UiNumberSpec<T> spec) { return new UiNumericField<>(setting, spec); }
+    public static <T extends Number> UiNumberControl<T> numberControl(UiSetting<T> setting, UiNumberSpec<T> spec) { return new UiNumberControl<>(setting, spec); }
+    public static UiAlert alert(UiFeedbackType type, UiText text) { return new UiAlert(type, text); }
+    public static UiAlert customAlert(UiText text, int color) { return UiAlert.custom(text, color); }
+    public static <T> UiSelectionList<T> selectionList(Supplier<List<T>> items, UiBinding<T> binding, Function<T, UiText> labels) { return new UiSelectionList<>(items, binding, labels); }
+    public static <T> UiCollectionEditor<T> collectionEditor(UiDialogHost dialogs, UiText title, UiListSetting<T> setting, UiListEntryAdapter<T> adapter) { return new UiCollectionEditor<>(dialogs, title, setting, adapter); }
 
     /** Draws one line, fitting literal text with an ellipsis before rendering. */
     public static void drawFittedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth, int color) {
@@ -178,7 +203,13 @@ public final class Ui {
         public boolean click(float mouseX, float mouseY, int button) { return false; }
         public boolean scroll(float mouseX, float mouseY, double amount) { return false; }
         public boolean drag(float mouseX, float mouseY, int button) { return false; }
+        /** True while this node owns an active pointer gesture. */
+        public boolean capturesPointer() { return false; }
         public boolean key(int keyCode) { return false; }
+        /** Receives a key with modifiers and a host-provided clipboard. */
+        public boolean key(UiKeyEvent event, UiClipboard clipboard) { return key(event.keyCode()); }
+        /** Receives one Unicode code point; hosts normalize version-specific events before this call. */
+        public boolean textInput(UiTextInput event, UiClipboard clipboard) { return false; }
         public boolean release(float mouseX, float mouseY, int button) { return false; }
         public boolean focusable() { return false; }
         protected boolean hasVisibleFocus(UiTheme theme) {
@@ -201,6 +232,14 @@ public final class Ui {
         }
         @Override public boolean scroll(float x, float y, double amount) {
             for (int index = children.size() - 1; index >= 0; index--) if (children.get(index).scroll(x, y, amount)) return true;
+            return false;
+        }
+        @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) {
+            for (int index = children.size() - 1; index >= 0; index--) if (children.get(index).key(event, clipboard)) return true;
+            return false;
+        }
+        @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) {
+            for (int index = children.size() - 1; index >= 0; index--) if (children.get(index).textInput(event, clipboard)) return true;
             return false;
         }
         public List<Node> focusableNodes() {

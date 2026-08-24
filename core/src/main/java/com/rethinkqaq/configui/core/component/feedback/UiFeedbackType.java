@@ -17,13 +17,19 @@
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.rethinkqaq.configui.core;
+package com.rethinkqaq.configui.core.component.feedback;
 
-/** GLFW-compatible key values kept here so core has no GLFW dependency. */
-public final class UiKey {
-    public static final int TAB = 258, ENTER = 257, SPACE = 32, LEFT = 263, RIGHT = 262, UP = 265, DOWN = 264,
-        PAGE_UP = 266, PAGE_DOWN = 267, HOME = 268, END = 269, BACKSPACE = 259, DELETE = 261,
-        ESCAPE = 256, A = 65, C = 67, V = 86, X = 88;
-    public static final int MOD_SHIFT = 1, MOD_CONTROL = 2;
-    private UiKey() { }
+/** Fixed semantic feedback colours. Only {@link #CUSTOM} accepts a caller-provided colour. */
+public enum UiFeedbackType {
+    INFO(0xFF3B82F6),
+    SUCCESS(0xFF22A060),
+    WARNING(0xFFF59E0B),
+    ERROR(0xFFDC3C3C),
+    CUSTOM(0);
+
+    private final int fixedColor;
+
+    UiFeedbackType(int fixedColor) { this.fixedColor = fixedColor; }
+
+    public int color(int customColor) { return this == CUSTOM ? customColor : fixedColor; }
 }

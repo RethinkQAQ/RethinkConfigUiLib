@@ -19,6 +19,7 @@
 package com.rethinkqaq.configui.minecraft;
 
 import com.rethinkqaq.configui.core.Ui;
+import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiTheme;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
@@ -46,6 +47,10 @@ public class UiScreen extends Screen {
         super(Component.literal("Rethink Config UI"));
         this.parent = parent;
         this.host = new UiHost(root, theme, layoutMode);
+        this.host.clipboard(new UiClipboard() {
+            @Override public String get() { return Minecraft.getInstance().keyboardHandler.getClipboard(); }
+            @Override public void set(String value) { Minecraft.getInstance().keyboardHandler.setClipboard(value); }
+        });
     }
 
     public UiHost host() { return host; }
@@ -86,6 +91,14 @@ public class UiScreen extends Screen {
     @Override public boolean mouseReleased(double mouseX, double mouseY, int button) { return host.mouseReleased(mouseX / contentScale(), mouseY / contentScale(), button); }
     @Override public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) { return host.mouseDragged(mouseX / contentScale(), mouseY / contentScale(), button); }
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return host.keyPressed(keyCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers); }
+    //?}
+
+    //? if >=26.1 {
+    /*@Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) { return host.charTyped(event.codepoint(), 0) || super.charTyped(event); }
+    *///?} else if >=1.21.11 {
+    /*@Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) { return host.charTyped(event.codepoint(), event.modifiers()) || super.charTyped(event); }
+    *///?} else {
+    @Override public boolean charTyped(char codePoint, int modifiers) { return host.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers); }
     //?}
 
     //? if <1.20.2 {

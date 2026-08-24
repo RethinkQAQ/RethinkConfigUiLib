@@ -55,7 +55,7 @@ public class UiSlider extends Ui.Node {
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         measuredWidth = maxWidth;
-        measuredHeight = theme.metrics().controlHeight() + renderer.lineHeight();
+        measuredHeight = theme.metrics().controlHeight() + (hasLabel() ? renderer.lineHeight() : 0);
     }
 
     private void set(double value) {
@@ -66,9 +66,12 @@ public class UiSlider extends Ui.Node {
     public void render(UiRenderer renderer, UiTheme theme) {
         int textColor = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         int accent = enabled() ? theme.palette().accent() : theme.palette().controlDisabled();
-        Ui.drawFittedText(renderer, text, bounds.x(), bounds.y(), bounds.width(), textColor);
-        UiBounds rail = new UiBounds(bounds.x(), bounds.y() + renderer.lineHeight() + theme.metrics().spacing(),
-            bounds.width(), Math.max(1f, theme.metrics().borderWidth() * 2));
+        if (hasLabel()) Ui.drawFittedText(renderer, text, bounds.x(), bounds.y(), bounds.width(), textColor);
+        float railHeight = Math.max(1f, theme.metrics().borderWidth() * 2);
+        float railY = hasLabel()
+            ? bounds.y() + renderer.lineHeight() + theme.metrics().spacing()
+            : bounds.y() + (bounds.height() - railHeight) / 2f;
+        UiBounds rail = new UiBounds(bounds.x(), railY, bounds.width(), railHeight);
         renderer.fillRoundRect(rail, rail.height(), theme.palette().border());
         float ratio = displayedRatio < 0 ? targetRatio() : displayedRatio;
         renderer.fillRoundRect(new UiBounds(rail.x(), rail.y(), rail.width() * ratio, rail.height()), rail.height(), accent);
@@ -82,6 +85,8 @@ public class UiSlider extends Ui.Node {
     }
 
     public float displayedRatio() { return displayedRatio < 0 ? targetRatio() : displayedRatio; }
+
+    private boolean hasLabel() { return !text.value().isEmpty(); }
 
     @Override
     public void advanceMotion(long nowNanos, UiTheme theme) {
@@ -113,6 +118,8 @@ public class UiSlider extends Ui.Node {
         if (enabled() && dragging && button == 0) { setFromX(x); return true; }
         return false;
     }
+
+    @Override public boolean capturesPointer() { return dragging; }
 
     @Override
     public boolean release(float x, float y, int button) {

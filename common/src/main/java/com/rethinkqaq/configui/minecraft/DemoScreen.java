@@ -21,10 +21,18 @@ package com.rethinkqaq.configui.minecraft;
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBadge;
 import com.rethinkqaq.configui.core.UiBinding;
+import com.rethinkqaq.configui.core.UiDialogHost;
 import com.rethinkqaq.configui.core.UiPageHost;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.component.data.UiListEntryAdapter;
+import com.rethinkqaq.configui.core.component.feedback.UiFeedbackType;
+import com.rethinkqaq.configui.core.component.feedback.UiToast;
+import com.rethinkqaq.configui.core.setting.UiListSetting;
+import com.rethinkqaq.configui.core.setting.UiNumberSpec;
+import com.rethinkqaq.configui.core.setting.UiSetting;
+import com.rethinkqaq.configui.core.setting.UiValidationResult;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,12 +42,15 @@ import net.minecraft.client.gui.screens.Screen;
 public final class DemoScreen extends UiScreen {
     public DemoScreen() { this(null); }
 
-    public DemoScreen(Screen parent) {
-        super(parent, page(), UiTheme.roseLight(), UiHost.LayoutMode.FULLSCREEN);
+    public DemoScreen(Screen parent) { this(parent, new AtomicReference<>()); }
+
+    private DemoScreen(Screen parent, AtomicReference<UiHost> host) {
+        super(parent, page(host), UiTheme.roseLight(), UiHost.LayoutMode.FULLSCREEN);
+        host.set(host());
         host().scalePolicy(UiScalePolicy.adaptive());
     }
 
-    private static Ui.Node page() {
+    private static Ui.Node page(AtomicReference<UiHost> host) {
         AtomicBoolean enabled = new AtomicBoolean(true);
         AtomicReference<Double> scale = new AtomicReference<>(1.0);
         AtomicReference<String> mode = new AtomicReference<>("Balanced");
@@ -48,31 +59,85 @@ public final class DemoScreen extends UiScreen {
             .add(Ui.label(UiText.literal("RETHINK CONFIG UI LIB")))
             .add(Ui.label(UiText.literal("Modern, dependency-free UI surfaces for configuration and custom pages")).wrap(true));
 
-        UiPageHost pages = Ui.pageHost()
-            .addPage(UiText.literal("General"), generalPage(enabled, scale, mode))
+        UiDialogHost dialogs = Ui.dialogHost();
+        UiPageHost pages = Ui.pageHost();
+        pages.addPage(UiText.literal("General"), generalPage(enabled, scale, mode, host, dialogs))
             .addPage(UiText.literal("Preview"), previewPage())
             .addPage(UiText.literal("Advanced"), advancedPage());
 
-        return Ui.scaffold(pages)
+        return dialogs.root(Ui.scaffold(pages)
             .header(header)
             .navigation(pages.navigation())
             .navigationMode(UiScaffold.NavigationMode.TOP)
-            .maxContentWidth(1080);
+            .maxContentWidth(1080));
     }
 
     private static Ui.Node generalPage(AtomicBoolean enabled, AtomicReference<Double> scale,
-                                       AtomicReference<String> mode) {
+                                       AtomicReference<String> mode, AtomicReference<UiHost> host, UiDialogHost dialogs) {
+        UiSetting<Double> scaleSetting = UiSetting.of(binding(scale::get, scale::set), 1.0)
+            .describedBy(UiText.literal("Controls the visual scale used by this demo."));
+        UiNumberSpec<Double> scaleSpec = UiNumberSpec.builder(UiNumberSpec.DOUBLE)
+            .range(0.5, 2.0).step(0.1).formatter(value -> String.format(java.util.Locale.ROOT, "%.1f", value)).build();
+        AtomicReference<String> profile = new AtomicReference<>("Rethink");
+        AtomicReference<String> filter = new AtomicReference<>("");
+        AtomicReference<String> selectedPreset = new AtomicReference<>("Balanced");
+        AtomicReference<List<String>> blockFilters = new AtomicReference<>(List.of("minecraft:stone", "minecraft:dirt"));
+        AtomicReference<Integer> precision = new AtomicReference<>(25);
+        UiSetting<Integer> precisionSetting = UiSetting.of(binding(precision::get, precision::set), 25);
+        UiNumberSpec<Integer> precisionSpec = UiNumberSpec.builder(UiNumberSpec.INTEGER).range(0, 100).step(5).build();
         Ui.Container settings = Ui.section(UiText.literal("GENERAL"));
         settings.add(Ui.settingRow(UiText.literal("Enable preview"),
                 Ui.toggle(UiText.literal(""), binding(enabled::get, enabled::set)))
                 .description(UiText.literal("Render a live preview in this screen.")))
             .add(Ui.settingRow(UiText.literal("Interface scale"),
-                Ui.slider(UiText.literal(""), binding(scale::get, scale::set), 0.5, 2.0, 0.1))
-                .description(UiText.literal("A host can bind this value directly to its own configuration.")))
+                Ui.numberControl(scaleSetting, scaleSpec))
+                .description(UiText.literal("A single control keeps the slider and 0.1-step numeric value synchronized.")))
             .add(Ui.settingRow(UiText.literal("Render mode"),
                 Ui.select(UiText.literal("Mode"), binding(mode::get, mode::set),
                     List.of("Fast", "Balanced", "Quality"), UiText::literal))
                 .description(UiText.literal("Select values with the mouse, keyboard or controller.")));
+
+        Ui.Container inputs = Ui.section(UiText.literal("INPUTS"));
+        inputs.add(Ui.formField(UiText.literal("Profile name"),
+                Ui.textField(binding(profile::get, profile::set)).placeholder(UiText.literal("Type a name"))
+                    .validator(value -> value.trim().isEmpty() ? UiValidationResult.error(UiText.literal("A name is required")) : UiValidationResult.OK))
+                .description(UiText.literal("Text commits on Enter or when the field loses focus.")))
+            .add(Ui.formField(UiText.literal("Precision"), Ui.numericField(precisionSetting, precisionSpec))
+                .description(UiText.literal("A separate integer setting that snaps to increments of 5.")));
+
+        Ui.Container feedback = Ui.section(UiText.literal("FEEDBACK"));
+        Ui.Row toastButtons = Ui.row().gap(8);
+        toastButtons.add(Ui.button(UiText.literal("Show info"),
+                () -> host.get().showToast(UiToast.info(UiText.literal("This is an information toast."))))
+                .variant(Ui.ButtonVariant.SECONDARY))
+            .add(Ui.button(UiText.literal("Show warning"),
+                () -> host.get().showToast(UiToast.warning(UiText.literal("This is a warning toast."))))
+                .variant(Ui.ButtonVariant.SECONDARY))
+            .add(Ui.button(UiText.literal("Show error"),
+                () -> host.get().showToast(UiToast.error(UiText.literal("This is an error toast."))))
+                .variant(Ui.ButtonVariant.DANGER));
+        feedback.add(Ui.alert(UiFeedbackType.INFO, UiText.literal("Info: this page uses optional UiSetting metadata.")))
+            .add(Ui.alert(UiFeedbackType.SUCCESS, UiText.literal("Success: valid values write back immediately when committed.")))
+            .add(Ui.alert(UiFeedbackType.WARNING, UiText.literal("Warning: persistence remains the responsibility of the host mod.")))
+            .add(Ui.alert(UiFeedbackType.ERROR, UiText.literal("Error: invalid input remains visible instead of silently changing the value.")))
+            .add(toastButtons);
+
+        Ui.Container list = Ui.section(UiText.literal("PRESETS"));
+        list.add(Ui.searchField(binding(filter::get, filter::set)).placeholder(UiText.literal("Filter presets")))
+            .add(Ui.selectionList(() -> List.of("Fast", "Balanced", "Quality", "Cinematic").stream()
+                    .filter(value -> value.toLowerCase(java.util.Locale.ROOT).contains(filter.get().toLowerCase(java.util.Locale.ROOT))).toList(),
+                binding(selectedPreset::get, selectedPreset::set), UiText::literal).emptyText(UiText.literal("No matching preset")));
+
+        UiListEntryAdapter<String> blockFilterAdapter = UiListEntryAdapter.builder(
+                () -> "", UiText::literal,
+                entry -> Ui.textField(entry).placeholder(UiText.literal("namespace:path"))
+                    .escapeCancels(false).validator(DemoScreen::validateResourceId))
+            .validator(DemoScreen::validateResourceId)
+            .uniqueValues()
+            .build();
+        Ui.Container editableList = Ui.section(UiText.literal("BLOCK FILTERS"));
+        editableList.add(Ui.collectionEditor(dialogs, UiText.literal("Block filters"),
+            UiListSetting.of(UiSetting.of(binding(blockFilters::get, blockFilters::set), List.of())), blockFilterAdapter));
 
         Ui.Container actions = Ui.section(UiText.literal("ACTIONS"));
         actions.add(Ui.row().gap(8)
@@ -91,6 +156,10 @@ public final class DemoScreen extends UiScreen {
                     .wrap(true),
                 UiText.literal("Only the main content area scrolls; the header and category navigation remain available.")))
             .add(settings)
+            .add(inputs)
+            .add(feedback)
+            .add(list)
+            .add(editableList)
             .add(actions);
     }
 
@@ -136,4 +205,10 @@ public final class DemoScreen extends UiScreen {
                                             java.util.function.Consumer<T> setter) {
         return UiBinding.of(getter, setter);
     }
+
+    private static UiValidationResult validateResourceId(String value) {
+        return value.matches("[a-z0-9_.-]+:[a-z0-9_./-]+") ? UiValidationResult.OK
+            : UiValidationResult.error(UiText.literal("Use a lowercase namespace:path identifier"));
+    }
+
 }

@@ -30,6 +30,7 @@ import java.util.Objects;
  */
 public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
     private final List<Page> pages = new ArrayList<>();
+    private final List<Page> subpages = new ArrayList<>();
     private UiNavigationBar navigation;
     private int selectedIndex = -1;
 
@@ -43,7 +44,23 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
     public int pageCount() { return pages.size(); }
     public int selectedIndex() { return selectedIndex; }
     public UiText pageTitle(int index) { return pages.get(index).title(); }
-    public Ui.Node currentPage() { return selectedIndex < 0 ? null : pages.get(selectedIndex).content(); }
+    public Ui.Node currentPage() { return currentContent(); }
+    public boolean showingSubpage() { return !subpages.isEmpty(); }
+
+    /** Opens a temporary second-level page. {@link #pop()} returns to the selected category page. */
+    public UiPageHost push(UiText title, Ui.Node content) {
+        subpages.add(new Page(Objects.requireNonNull(title, "title"), Ui.scrollView(Objects.requireNonNull(content, "content"))));
+        invalidateLayout();
+        return this;
+    }
+
+    /** Closes the current second-level page, if one is open. */
+    public boolean pop() {
+        if (subpages.isEmpty()) return false;
+        subpages.remove(subpages.size() - 1);
+        invalidateLayout();
+        return true;
+    }
 
     /** Returns a stable navigation node which can be attached to {@link UiScaffold}. */
     public UiNavigationBar navigation() {
@@ -59,6 +76,7 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
         int next = Math.max(0, Math.min(index, pages.size() - 1));
         if (next != selectedIndex) {
             selectedIndex = next;
+            subpages.clear();
             pages.get(selectedIndex).content().reset();
             invalidateLayout();
         }
@@ -66,7 +84,8 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
     }
 
     @Override public List<Ui.Node> childNodes() {
-        return selectedIndex < 0 ? List.of() : List.of(pages.get(selectedIndex).content());
+        Ui.ScrollView content = currentContent();
+        return content == null ? List.of() : List.of(content);
     }
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -75,7 +94,7 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
             measuredHeight = maxHeight;
             return;
         }
-        Ui.Node page = pages.get(selectedIndex).content();
+        Ui.ScrollView page = currentContent();
         page.measure(renderer, maxWidth, maxHeight, theme);
         measuredWidth = Math.min(maxWidth, page.measuredWidth());
         measuredHeight = Math.min(maxHeight, page.measuredHeight());
@@ -83,27 +102,40 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
 
     @Override public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
-        if (selectedIndex >= 0) pages.get(selectedIndex).content().layout(renderer, value, theme);
+        Ui.ScrollView content = currentContent();
+        if (content != null) content.layout(renderer, value, theme);
     }
 
     @Override public void render(UiRenderer renderer, UiTheme theme) {
-        if (selectedIndex >= 0) pages.get(selectedIndex).content().render(renderer, theme);
+        Ui.ScrollView content = currentContent();
+        if (content != null) content.render(renderer, theme);
     }
 
     @Override public boolean click(float x, float y, int button) {
-        return selectedIndex >= 0 && pages.get(selectedIndex).content().click(x, y, button);
+        Ui.ScrollView content = currentContent();
+        return content != null && content.click(x, y, button);
     }
     @Override public boolean scroll(float x, float y, double amount) {
-        return selectedIndex >= 0 && pages.get(selectedIndex).content().scroll(x, y, amount);
+        Ui.ScrollView content = currentContent();
+        return content != null && content.scroll(x, y, amount);
     }
     @Override public boolean drag(float x, float y, int button) {
-        return selectedIndex >= 0 && pages.get(selectedIndex).content().drag(x, y, button);
+        Ui.ScrollView content = currentContent();
+        return content != null && content.drag(x, y, button);
     }
     @Override public boolean release(float x, float y, int button) {
-        return selectedIndex >= 0 && pages.get(selectedIndex).content().release(x, y, button);
+        Ui.ScrollView content = currentContent();
+        return content != null && content.release(x, y, button);
     }
     @Override public boolean key(int keyCode) {
-        return selectedIndex >= 0 && pages.get(selectedIndex).content().key(keyCode);
+        if (keyCode == UiKey.ESCAPE && pop()) return true;
+        Ui.ScrollView content = currentContent();
+        return content != null && content.key(keyCode);
+    }
+
+    private Ui.ScrollView currentContent() {
+        if (!subpages.isEmpty()) return subpages.get(subpages.size() - 1).content();
+        return selectedIndex < 0 ? null : pages.get(selectedIndex).content();
     }
 
     private record Page(UiText title, Ui.ScrollView content) { }

@@ -73,6 +73,6 @@ public class UiScrollView extends Ui.Container {
         if (keyCode == UiKey.PAGE_DOWN) { offset = Math.min(max, offset + page); return true; }
         if (keyCode == UiKey.HOME) { offset = 0; return true; }
         if (keyCode == UiKey.END) { offset = max; return true; }
-        return super.key(keyCode);
+        return child().key(keyCode);
     }
 }

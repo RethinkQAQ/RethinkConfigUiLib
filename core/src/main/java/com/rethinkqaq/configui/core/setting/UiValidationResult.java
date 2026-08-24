@@ -17,20 +17,18 @@
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.rethinkqaq.configui.core.component;
+package com.rethinkqaq.configui.core.setting;
 
-import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
-import com.rethinkqaq.configui.core.UiTheme;
 
-/** A button whose label is intended to be rendered as an icon or compact glyph. */
-public class UiIconButton extends UiButton {
-    public UiIconButton(UiText label, Runnable action) { super(label, action); }
-
-    @Override
-    protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        measuredWidth = Math.min(maxWidth, Math.max(theme.metrics().controlHeight(),
-            renderer.textWidth(text) + theme.metrics().padding()));
-        measuredHeight = theme.metrics().controlHeight();
+/** Outcome of a setting validation. Errors reject a write; warnings allow it. */
+public record UiValidationResult(Severity severity, UiText message) {
+    public enum Severity { OK, WARNING, ERROR }
+    public static final UiValidationResult OK = new UiValidationResult(Severity.OK, UiText.literal(""));
+    public UiValidationResult {
+        if (severity == null || message == null) throw new NullPointerException("validation values");
     }
+    public static UiValidationResult warning(UiText message) { return new UiValidationResult(Severity.WARNING, message); }
+    public static UiValidationResult error(UiText message) { return new UiValidationResult(Severity.ERROR, message); }
+    public boolean accepted() { return severity != Severity.ERROR; }
 }

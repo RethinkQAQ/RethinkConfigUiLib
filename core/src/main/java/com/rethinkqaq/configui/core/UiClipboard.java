@@ -19,11 +19,15 @@
 
 package com.rethinkqaq.configui.core;
 
-/** GLFW-compatible key values kept here so core has no GLFW dependency. */
-public final class UiKey {
-    public static final int TAB = 258, ENTER = 257, SPACE = 32, LEFT = 263, RIGHT = 262, UP = 265, DOWN = 264,
-        PAGE_UP = 266, PAGE_DOWN = 267, HOME = 268, END = 269, BACKSPACE = 259, DELETE = 261,
-        ESCAPE = 256, A = 65, C = 67, V = 86, X = 88;
-    public static final int MOD_SHIFT = 1, MOD_CONTROL = 2;
-    private UiKey() { }
+/** Small host-owned clipboard bridge. Core never accesses a desktop clipboard directly. */
+public interface UiClipboard {
+    String get();
+    void set(String value);
+    static UiClipboard memory() {
+        return new UiClipboard() {
+            private String value = "";
+            @Override public String get() { return value; }
+            @Override public void set(String newValue) { value = newValue == null ? "" : newValue; }
+        };
+    }
 }

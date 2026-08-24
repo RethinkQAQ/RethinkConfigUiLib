@@ -30,6 +30,8 @@ import com.rethinkqaq.configui.core.UiTheme;
 public class UiTooltip extends Ui.Node {
     private final Ui.Node child;
     private final UiText tooltip;
+    private long hoverStartedNanos = -1;
+    private long delayMillis = 400;
 
     public UiTooltip(Ui.Node child, UiText tooltip) {
         this.child = Objects.requireNonNull(child, "child");
@@ -38,6 +40,13 @@ public class UiTooltip extends Ui.Node {
 
     public Ui.Node child() { return child; }
     public UiText text() { return tooltip; }
+    public UiTooltip delayMillis(long value) { if (value < 0) throw new IllegalArgumentException("delay"); delayMillis = value; return this; }
+    public boolean visible(long nowNanos) { return (hovered() || child.focused()) && hoverStartedNanos >= 0 && (nowNanos - hoverStartedNanos) / 1_000_000L >= delayMillis; }
+    @Override public void setHovered(boolean value) {
+        boolean changed = value != hovered(); super.setHovered(value);
+        if (value && changed) hoverStartedNanos = System.nanoTime();
+        if (!value) hoverStartedNanos = -1;
+    }
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         child.measure(renderer, maxWidth, maxHeight, theme);
