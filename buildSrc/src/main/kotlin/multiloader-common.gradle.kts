@@ -1,5 +1,6 @@
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
 plugins {
     java
@@ -35,7 +36,33 @@ version = listOfNotNull(commonMod.version, buildSuffix, "mc${commonMod.mc}").joi
 // Give internal components distinct module identities to prevent Gradle 9 from
 // substituting a common project dependency with the current loader project.
 group = "${commonMod.group}.${loader ?: "common"}"
-base { archivesName = "${commonMod.id}-${loader ?: "common"}" }
+val artifactBase = commonMod.propOrNull("rcui.artifact_base")
+    ?: commonMod.id.replace('_', '-')
+val publishedLoaderName = loader ?: "common"
+val publishedArchiveBaseName = artifactBase
+base { archivesName = publishedArchiveBaseName }
+tasks.withType<AbstractArchiveTask>().configureEach {
+    archiveBaseName.set(publishedArchiveBaseName)
+    archiveFileName.set(project.provider {
+        val classifier = archiveClassifier.orNull
+            ?.takeIf(String::isNotEmpty)
+            ?.let { "-$it" }
+            ?: ""
+        "$publishedArchiveBaseName-${project.version}-$publishedLoaderName$classifier.${archiveExtension.get()}"
+    })
+}
+gradle.projectsEvaluated {
+    tasks.withType<AbstractArchiveTask>().configureEach {
+        archiveBaseName.set(publishedArchiveBaseName)
+        archiveFileName.set(project.provider {
+            val classifier = archiveClassifier.orNull
+                ?.takeIf(String::isNotEmpty)
+                ?.let { "-$it" }
+                ?: ""
+            "$publishedArchiveBaseName-${project.version}-$publishedLoaderName$classifier.${archiveExtension.get()}"
+        })
+    }
+}
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(configuredJavaVersion)
@@ -176,7 +203,7 @@ tasks.named("processResources") { dependsOn(stonecutterGenerateTask) }
 publishing {
     publications.register<MavenPublication>("mavenJava") {
         groupId = commonMod.group
-        artifactId = "${commonMod.id}-${loader ?: "common"}-mc${commonMod.mc}"
+        artifactId = "$artifactBase-mc${commonMod.mc}-$publishedLoaderName"
         version = commonMod.version
         from(components["java"])
     }
