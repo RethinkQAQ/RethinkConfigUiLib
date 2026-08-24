@@ -26,6 +26,9 @@ dependencies {
         })
     }
     modImplementation("net.fabricmc:fabric-loader:${commonMod.dep("fabric-loader")}")
+    if (!providers.gradleProperty("skipOptionalDependencies").isPresent) {
+        commonMod.depOrNull("modmenu")?.let { modLocalRuntime("com.terraformersmc:modmenu:$it") }
+    }
 }
 
 // Older Fabric API modules publish Fabric Loader transitively. Keep the

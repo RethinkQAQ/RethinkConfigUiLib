@@ -85,7 +85,10 @@ val jarJarContainer = jarJar.register {
 dependencies {
     implementation(project(":core"))
     val configDependency = project.dependencies.project(mapOf("path" to ":config"))
-    implementation(configDependency)
+    // Config classes are merged into the Forge development output below. Keep
+    // the project dependency off Forge's runtime module path to avoid a JPMS
+    // split package between the standalone config module and main.
+    compileOnly(configDependency)
     val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
     implementation(snakeYaml)
     add(jarJarContainer.configurationName, snakeYaml)
