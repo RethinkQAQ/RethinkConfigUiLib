@@ -94,8 +94,9 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         float shellWidth = shellWidth(maxWidth);
         compact = shellWidth < COMPACT_WIDTH;
         float gap = gap(theme);
-        headerVisible = header != null && shellWidth >= HEADER_HIDE_WIDTH;
-        headerHeight = headerVisible ? measureHeight(header, renderer, shellWidth, maxHeight, theme) : 0;
+        boolean headerInRange = header != null && shellWidth >= HEADER_HIDE_WIDTH;
+        headerHeight = headerInRange ? measureHeight(header, renderer, shellWidth, maxHeight, theme) : 0;
+        headerVisible = headerInRange && headerHeight > 0;
         footerHeight = measureHeight(footer, renderer, shellWidth, maxHeight, theme);
         navigationHeight = navigationMode == NavigationMode.TOP
             ? measureHeight(navigation, renderer, shellWidth, maxHeight, theme) : 0;

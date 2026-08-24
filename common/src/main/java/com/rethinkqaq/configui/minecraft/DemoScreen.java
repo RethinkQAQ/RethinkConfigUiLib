@@ -26,6 +26,8 @@ import com.rethinkqaq.configui.core.UiPageHost;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.layout.UiHeader;
+import com.rethinkqaq.configui.core.layout.UiHeaderStyle;
 import com.rethinkqaq.configui.core.component.data.UiListEntryAdapter;
 import com.rethinkqaq.configui.core.component.feedback.UiFeedbackType;
 import com.rethinkqaq.configui.core.component.feedback.UiToast;
@@ -55,10 +57,11 @@ public final class DemoScreen extends UiScreen {
         AtomicReference<Double> scale = new AtomicReference<>(1.0);
         AtomicReference<String> mode = new AtomicReference<>("Balanced");
 
-        Ui.Container header = Ui.panel()
-            .padding(8)
-            .add(Ui.label(UiText.literal("RETHINK CONFIG UI LIB")))
-            .add(Ui.label(UiText.literal("Modern, dependency-free UI surfaces for configuration and custom pages")).wrap(true));
+        UiHeader header = UiHeader.builder(UiText.literal("RETHINK CONFIG UI LIB"))
+            .subtitle(UiText.literal("Modern, dependency-free UI surfaces for configuration and custom pages"))
+            .style(UiHeaderStyle.TEXT)
+            .responsive(true)
+            .build();
 
         UiDialogHost dialogs = Ui.dialogHost();
         UiPageHost pages = Ui.pageHost();
@@ -149,7 +152,15 @@ public final class DemoScreen extends UiScreen {
                 }).variant(Ui.ButtonVariant.SECONDARY))
                 .add(Ui.button(UiText.literal("Apply"), () -> { })))
             .add(Ui.tooltip(Ui.label(UiText.literal("Changes apply immediately")),
-                UiText.literal("The host decides when and how values are persisted.")));
+                UiText.literal("The host decides when and how values are persisted.\n"
+                    + "This tooltip wraps complete paragraphs and stays inside the screen."))
+                .maxWidth(300)
+                .overflow(com.rethinkqaq.configui.core.component.UiTooltip.TextOverflow.WRAP))
+            .add(Ui.tooltip(Ui.label(UiText.literal("Rich tooltip preview")),
+                Ui.panel().padding(8)
+                    .add(Ui.label(UiText.literal("Preview content")).wrap(false))
+                    .add(Ui.badge(UiText.literal("READ ONLY"))))
+                .maxWidth(220));
 
         return Ui.column().gap(14)
             .add(Ui.tooltip(
@@ -190,7 +201,8 @@ public final class DemoScreen extends UiScreen {
     private static Ui.Node advancedPage() {
         Ui.Container disabled = Ui.section(UiText.literal("STATES"));
         disabled.add(Ui.settingRow(UiText.literal("Disabled toggle"),
-                Ui.toggle(UiText.literal("Unavailable"), UiBinding.of(() -> false, value -> { })))
+                Ui.toggle(UiText.literal("Unavailable"), UiBinding.of(() -> false, value -> { }))
+                    .enabled(false))
                 .description(UiText.literal("Disabled controls retain their layout and remain readable.")))
             .add(Ui.button(UiText.literal("Disabled action"), () -> { })
                 .enabled(false));

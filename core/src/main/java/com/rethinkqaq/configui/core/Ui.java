@@ -32,6 +32,7 @@ import com.rethinkqaq.configui.core.component.UiSelect;
 import com.rethinkqaq.configui.core.component.UiSlider;
 import com.rethinkqaq.configui.core.component.UiToggle;
 import com.rethinkqaq.configui.core.component.UiTooltip;
+import com.rethinkqaq.configui.core.component.UiTooltipContent;
 import com.rethinkqaq.configui.core.component.data.UiListEntryAdapter;
 import com.rethinkqaq.configui.core.component.data.UiCollectionEditor;
 import com.rethinkqaq.configui.core.component.data.UiSelectionList;
@@ -43,6 +44,7 @@ import com.rethinkqaq.configui.core.component.input.UiSearchField;
 import com.rethinkqaq.configui.core.component.input.UiNumberControl;
 import com.rethinkqaq.configui.core.component.input.UiTextField;
 import com.rethinkqaq.configui.core.layout.UiColumn;
+import com.rethinkqaq.configui.core.layout.UiHeader;
 import com.rethinkqaq.configui.core.layout.UiPanel;
 import com.rethinkqaq.configui.core.layout.UiRow;
 import com.rethinkqaq.configui.core.layout.UiScrollView;
@@ -68,6 +70,8 @@ public final class Ui {
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
     public static UiScaffold scaffold(Node content) { return new UiScaffold(content); }
+    public static UiHeader header(UiText title) { return UiHeader.card(title); }
+    public static UiHeader textHeader(UiText title) { return UiHeader.text(title); }
     public static UiDialogHost dialogHost() { return new UiDialogHost(); }
     public static UiDialogHost dialogHost(Node root) { return new UiDialogHost(root); }
     public static UiPageHost pageHost() { return new UiPageHost(); }
@@ -82,6 +86,8 @@ public final class Ui {
     public static <T> Select<T> select(UiText text, UiBinding<T> binding, List<T> values, Function<T, UiText> labels) { return new Select<>(text, binding, values, labels); }
     public static ScrollView scrollView(Node child) { return new ScrollView(child); }
     public static Tooltip tooltip(Node child, UiText text) { return new Tooltip(child, text); }
+    public static Tooltip tooltip(Node child, UiTooltipContent content) { return new Tooltip(child, content); }
+    public static Tooltip tooltip(Node child, Node content) { return new Tooltip(child, UiTooltipContent.node(content)); }
     public static UiTextField textField(UiBinding<String> binding) { return new UiTextField(binding); }
     public static UiSearchField searchField(UiBinding<String> binding) { return new UiSearchField(binding); }
     public static <T extends Number> UiNumericField<T> numericField(UiSetting<T> setting, UiNumberSpec<T> spec) { return new UiNumericField<>(setting, spec); }
@@ -126,9 +132,48 @@ public final class Ui {
         return result;
     }
 
+    /** Tooltip-specific wrapping with explicit newlines and selectable truncation. */
+    public static List<UiText> wrapLines(UiRenderer renderer, UiText text, float maxWidth, int maxLines,
+                                         boolean ellipsis) {
+        if (maxWidth <= 0 || maxLines <= 0) return List.of();
+        if (text.translatable()) return List.of(text);
+        List<UiText> result = new ArrayList<>();
+        for (String paragraph : text.value().split("\\R", -1)) {
+            String remaining = paragraph.trim();
+            if (remaining.isEmpty()) {
+                if (result.size() < maxLines) result.add(UiText.literal(""));
+                continue;
+            }
+            while (!remaining.isEmpty() && result.size() < maxLines) {
+                int length = fitPrefix(renderer, remaining, maxWidth);
+                boolean hasMore = length < remaining.length();
+                if (hasMore) {
+                    int split = remaining.lastIndexOf(' ', Math.max(0, length - 1));
+                    if (split > 0) length = split;
+                }
+                if (length <= 0) length = Math.min(1, remaining.length());
+                String line = remaining.substring(0, length).trim();
+                remaining = remaining.substring(length).trim();
+                if (hasMore && result.size() + 1 == maxLines) {
+                    if (ellipsis) line = fitted(renderer, UiText.literal(line + "..."), maxWidth).value();
+                    remaining = "";
+                }
+                result.add(UiText.literal(line));
+            }
+            if (result.size() == maxLines) break;
+        }
+        if (result.isEmpty()) result.add(UiText.literal(""));
+        return result;
+    }
+
     public static void drawWrappedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth,
                                        int maxLines, int color, float lineGap) {
-        List<UiText> lines = wrapLines(renderer, text, maxWidth, maxLines);
+        drawWrappedText(renderer, text, x, y, maxWidth, maxLines, color, lineGap, true);
+    }
+
+    public static void drawWrappedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth,
+                                       int maxLines, int color, float lineGap, boolean ellipsis) {
+        List<UiText> lines = wrapLines(renderer, text, maxWidth, maxLines, ellipsis);
         for (int index = 0; index < lines.size(); index++) renderer.drawText(lines.get(index), x,
             y + index * (renderer.lineHeight() + lineGap), color);
     }
@@ -298,5 +343,14 @@ public final class Ui {
     }
     public static final class Tooltip extends UiTooltip {
         private Tooltip(Node child, UiText text) { super(child, text); }
+        private Tooltip(Node child, UiTooltipContent content) { super(child, content); }
+        @Override public Tooltip delayMillis(long value) { super.delayMillis(value); return this; }
+        @Override public Tooltip minWidth(float value) { super.minWidth(value); return this; }
+        @Override public Tooltip maxWidth(float value) { super.maxWidth(value); return this; }
+        @Override public Tooltip maxHeight(float value) { super.maxHeight(value); return this; }
+        @Override public Tooltip maxLines(int value) { super.maxLines(value); return this; }
+        @Override public Tooltip padding(float value) { super.padding(value); return this; }
+        @Override public Tooltip lineGap(float value) { super.lineGap(value); return this; }
+        @Override public Tooltip overflow(UiTooltip.TextOverflow value) { super.overflow(value); return this; }
     }
 }

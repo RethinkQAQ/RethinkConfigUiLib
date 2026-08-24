@@ -19,6 +19,7 @@
 package com.rethinkqaq.configui.minecraft;
 
 import com.rethinkqaq.configui.core.Ui;
+import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiDialogHost;
 import com.rethinkqaq.configui.core.UiKey;
@@ -26,6 +27,8 @@ import com.rethinkqaq.configui.core.UiKeyEvent;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTextInput;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.component.UiTooltip;
+import com.rethinkqaq.configui.core.component.UiTooltipContent;
 import com.rethinkqaq.configui.core.component.feedback.UiNotificationCenter;
 import com.rethinkqaq.configui.core.component.feedback.UiToast;
 import java.util.ArrayList;
@@ -49,6 +52,7 @@ public final class UiHost {
     private final UiNotificationCenter notifications = new UiNotificationCenter();
     private final LayoutMode layoutMode;
     private UiScalePolicy scalePolicy = UiScalePolicy.minecraft();
+    private UiBackground background;
 
     public UiHost(Ui.Node root, UiTheme theme) {
         this(root, theme, LayoutMode.CONTENT);
@@ -62,6 +66,11 @@ public final class UiHost {
 
     public UiTheme theme() { return theme; }
     public Ui.Node root() { return root; }
+    /** Overrides the default opaque theme background for standalone or embedded hosts. */
+    public UiHost background(UiBackground value) { background = Objects.requireNonNull(value, "background"); return this; }
+    public UiBackground background() {
+        return background == null ? UiBackground.opaque(theme.palette().surface()) : background;
+    }
     /** Provides the host clipboard to focused core input controls. */
     public UiHost clipboard(UiClipboard value) { clipboard = Objects.requireNonNull(value, "clipboard"); return this; }
     public UiClipboard clipboard() { return clipboard; }
@@ -118,7 +127,8 @@ public final class UiHost {
         updateHovered(root, canvasMouseX, canvasMouseY);
         advanceMotion(root, System.nanoTime());
         root.render(renderer, theme);
-        hoveredTooltip(root).ifPresent(tooltip -> renderTooltip(renderer, tooltip.text(), canvasWidth, canvasHeight, Math.round(canvasMouseX), Math.round(canvasMouseY)));
+        hoveredTooltip(root).ifPresent(tooltip -> renderTooltip(renderer, tooltip, canvasWidth, canvasHeight,
+            Math.round(canvasMouseX), Math.round(canvasMouseY)));
         notifications.render(renderer, canvasWidth, canvasHeight, theme);
     }
 
@@ -171,7 +181,10 @@ public final class UiHost {
         // local counter than a newly inserted node. Fold identity, local revision and children
         // so adding a dialog (or replacing a collection row) always produces a new signature.
         long revision = mix(System.identityHashCode(node), node.layoutVersion());
-        if (node instanceof Ui.Tooltip tooltip) revision = mix(revision, layoutRevision(tooltip.child()));
+        if (node instanceof Ui.Tooltip tooltip) {
+            revision = mix(revision, layoutRevision(tooltip.child()));
+            if (tooltip.content() != null) revision = mix(revision, tooltip.content().layoutVersion());
+        }
         if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) revision = mix(revision, layoutRevision(child));
         if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) revision = mix(revision, layoutRevision(child));
         return revision;
@@ -251,18 +264,64 @@ public final class UiHost {
         }
         return java.util.Optional.empty();
     }
-    private void renderTooltip(UiRenderer renderer, com.rethinkqaq.configui.core.UiText text, int screenWidth, int screenHeight, int mouseX, int mouseY) {
-        float padding = theme.metrics().padding() / 2f;
-        float maximum = Math.min(260, Math.max(80, screenWidth * .4f));
-        java.util.List<com.rethinkqaq.configui.core.UiText> lines = Ui.wrapLines(renderer, text, maximum - padding * 2, 4);
-        float width = 0; for (com.rethinkqaq.configui.core.UiText line : lines) width = Math.max(width, renderer.textWidth(line));
-        width += padding * 2;
-        float height = renderer.lineHeight() * lines.size() + padding * 2;
-        float x = Math.min(Math.max(0, mouseX + 10), screenWidth - width);
-        float y = Math.min(Math.max(0, mouseY + 10), screenHeight - height);
+    private void renderTooltip(UiRenderer renderer, Ui.Tooltip tooltip, int screenWidth, int screenHeight,
+                               int mouseX, int mouseY) {
+        float padding = tooltip.padding(theme);
+        float screenMargin = 6;
+        float maximum = Math.min(tooltip.maxWidth(), Math.max(1, screenWidth - screenMargin * 2));
+        float width;
+        float height;
+        List<com.rethinkqaq.configui.core.UiText> lines = List.of();
+        UiTooltipContent content = tooltip.content();
+        if (content != null) {
+            content.measure(renderer, Math.max(1, maximum - padding * 2),
+                Math.min(tooltip.maxHeight(), Math.max(1, screenHeight - screenMargin * 2 - padding * 2)), theme);
+            width = Math.min(maximum, content.measuredWidth() + padding * 2);
+            height = Math.min(tooltip.maxHeight(), content.measuredHeight() + padding * 2);
+        } else {
+            com.rethinkqaq.configui.core.UiText text = tooltip.text();
+            float textMaximum = Math.max(1, maximum - padding * 2);
+            if (tooltip.overflow() == UiTooltip.TextOverflow.NO_WRAP) {
+                lines = List.of(Ui.fitText(renderer, text, textMaximum));
+            } else {
+                int lineLimit = tooltip.maxLines();
+                if (tooltip.maxHeight() < Float.MAX_VALUE) {
+                    float lineSpace = renderer.lineHeight() + tooltip.lineGap();
+                    lineLimit = Math.min(lineLimit, Math.max(1,
+                        (int) ((tooltip.maxHeight() - padding * 2 + tooltip.lineGap()) / lineSpace)));
+                }
+                boolean ellipsis = tooltip.overflow() == UiTooltip.TextOverflow.ELLIPSIS;
+                lines = Ui.wrapLines(renderer, text, textMaximum, lineLimit, ellipsis);
+            }
+            float textWidth = 0;
+            for (com.rethinkqaq.configui.core.UiText line : lines) textWidth = Math.max(textWidth, renderer.textWidth(line));
+            width = Math.max(tooltip.minWidth(), textWidth + padding * 2);
+            width = Math.min(maximum, width);
+            height = renderer.lineHeight() * lines.size()
+                + tooltip.lineGap() * Math.max(0, lines.size() - 1) + padding * 2;
+            height = Math.min(tooltip.maxHeight(), height);
+        }
+        width = Math.max(1, Math.min(maximum, width));
+        height = Math.max(1, Math.min(screenHeight - screenMargin * 2, height));
+        float x = mouseX + 12;
+        if (x + width > screenWidth - screenMargin) x = mouseX - width - 12;
+        x = Math.max(screenMargin, Math.min(x, screenWidth - screenMargin - width));
+        float y = mouseY + 12;
+        if (y + height > screenHeight - screenMargin) y = mouseY - height - 12;
+        y = Math.max(screenMargin, Math.min(y, screenHeight - screenMargin - height));
         com.rethinkqaq.configui.core.UiBounds bounds = new com.rethinkqaq.configui.core.UiBounds(x, y, width, height);
         renderer.fillRoundRect(bounds, theme.metrics().radius(), theme.palette().control());
-        Ui.drawWrappedText(renderer, text, x + padding, y + padding, width - padding * 2, lines.size(), theme.palette().onAccent(), 0);
+        renderer.strokeRoundRect(bounds, theme.metrics().radius(), Math.min(1, theme.metrics().borderWidth()), theme.palette().border());
+        if (content != null) {
+            com.rethinkqaq.configui.core.UiBounds contentBounds = bounds.inset(padding);
+            content.layout(renderer, contentBounds, theme);
+            content.render(renderer, theme);
+        } else if (!lines.isEmpty()) {
+            boolean clipped = tooltip.overflow() == UiTooltip.TextOverflow.CLIP;
+            int lineLimit = lines.size();
+            Ui.drawWrappedText(renderer, tooltip.text(), x + padding, y + padding,
+                width - padding * 2, lineLimit, theme.palette().onAccent(), tooltip.lineGap(), !clipped);
+        }
     }
     private void focusAt(float x, float y) { for (Ui.Node node : focusable()) if (node.bounds().contains(x, y)) { setFocus(node); return; } setFocus(null); }
     private void moveFocus(boolean backwards) {

@@ -59,7 +59,9 @@ public class UiScreen extends Screen {
     *///?} else {
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     //?}
-        graphics.fill(0, 0, width, height, host.theme().palette().surface());
+        if (host.background().paintsSurface()) {
+            graphics.fill(0, 0, width, height, host.background().color());
+        }
         host.render(new MinecraftUiRenderer(graphics, 1f), width, height,
             Minecraft.getInstance().getWindow().getGuiScale(), mouseX, mouseY);
     }
@@ -72,7 +74,7 @@ public class UiScreen extends Screen {
     //? if >=1.21.11 {
     /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x(), event.y(), event.button()); }
     @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x(), event.y(), event.button()); }
-    @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(mouseX, mouseY, event.button()); }
+    @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(event.x(), event.y(), event.button()); }
     @Override public boolean keyPressed(KeyEvent event) { return host.keyPressed(event.key(), event.modifiers()) || super.keyPressed(event); }
     *///?} else {
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) { return host.mouseClicked(mouseX, mouseY, button); }

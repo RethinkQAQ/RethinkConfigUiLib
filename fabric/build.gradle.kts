@@ -26,6 +26,8 @@ dependencies {
         })
     }
     modImplementation("net.fabricmc:fabric-loader:${commonMod.dep("fabric-loader")}")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${commonMod.dep("fabric-api")}")
+
     if (!providers.gradleProperty("skipOptionalDependencies").isPresent) {
         commonMod.depOrNull("modmenu")?.let { modLocalRuntime("com.terraformersmc:modmenu:$it") }
     }

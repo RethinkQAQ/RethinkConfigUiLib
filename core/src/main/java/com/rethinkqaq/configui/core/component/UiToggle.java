@@ -58,15 +58,16 @@ public class UiToggle extends Ui.Node {
             enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled());
         float progress = onProgress < 0 ? (on ? 1f : 0f) : onProgress;
         UiBounds track = new UiBounds(bounds.x() + bounds.width() - width, bounds.y(), width, bounds.height());
-        renderer.fillRoundRect(track, track.height() / 2,
-            !enabled() ? theme.palette().controlDisabled()
-                : blend(theme.palette().control(), theme.palette().accent(), progress));
+        int trackColor = !enabled()
+            ? blend(theme.palette().controlDisabled(), theme.palette().surface(), .35f)
+            : blend(theme.palette().control(), theme.palette().accent(), progress);
+        renderer.fillRoundRect(track, track.height() / 2, trackColor);
         float knob = track.height() - theme.metrics().padding();
         renderer.fillRoundRect(new UiBounds(
             track.x() + theme.metrics().padding() / 2
                 + (track.width() - knob - theme.metrics().padding()) * progress,
             track.y() + theme.metrics().padding() / 2, knob, knob), knob / 2,
-            theme.palette().surfaceRaised());
+            enabled() ? theme.palette().surfaceRaised() : theme.palette().textDisabled());
         if (hasVisibleFocus(theme)) renderer.strokeRoundRect(track, track.height() / 2,
             theme.metrics().borderWidth(), blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
     }

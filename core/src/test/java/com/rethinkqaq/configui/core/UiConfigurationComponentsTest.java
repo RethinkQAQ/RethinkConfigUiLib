@@ -34,6 +34,8 @@ import com.rethinkqaq.configui.core.component.input.UiNumericField;
 import com.rethinkqaq.configui.core.component.input.UiNumberControl;
 import com.rethinkqaq.configui.core.component.input.UiTextField;
 import com.rethinkqaq.configui.core.component.input.UiFormField;
+import com.rethinkqaq.configui.core.layout.UiHeader;
+import com.rethinkqaq.configui.core.layout.UiHeaderStyle;
 import com.rethinkqaq.configui.core.setting.UiListSetting;
 import com.rethinkqaq.configui.core.setting.UiNumberSpec;
 import com.rethinkqaq.configui.core.setting.UiSetting;
@@ -218,6 +220,56 @@ class UiConfigurationComponentsTest {
         assertFalse(tooltip.visible(System.nanoTime()));
         tooltip.delayMillis(0);
         assertTrue(tooltip.visible(System.nanoTime()));
+    }
+
+    @Test
+    void tooltipTextSupportsExplicitLinesAndConfigurableOverflow() {
+        List<UiText> lines = Ui.wrapLines(RENDERER,
+            UiText.literal("First line\nSecond line with more words"), 60, Integer.MAX_VALUE, false);
+        assertEquals(List.of("First line", "Second", "line with", "more words"),
+            lines.stream().map(UiText::value).toList());
+
+        Ui.Tooltip tooltip = Ui.tooltip(Ui.label(UiText.literal("Target")), UiText.literal("Help"))
+            .maxWidth(360).maxLines(2).overflow(com.rethinkqaq.configui.core.component.UiTooltip.TextOverflow.ELLIPSIS);
+        assertEquals(360, tooltip.maxWidth());
+        assertEquals(2, tooltip.maxLines());
+    }
+
+    @Test
+    void tooltipCanUseReadOnlyComponentContent() {
+        Ui.Tooltip tooltip = Ui.tooltip(Ui.label(UiText.literal("Target")),
+            com.rethinkqaq.configui.core.component.UiTooltipContent.node(Ui.badge(UiText.literal("INFO"))));
+        assertTrue(tooltip.hasContent());
+        assertFalse(tooltip.hasText());
+    }
+
+    @Test
+    void backgroundModesPreserveOpaqueAndTransparentSemantics() {
+        assertEquals(UiBackground.Mode.OPAQUE, UiBackground.opaque(0x00112233).mode());
+        assertEquals(0xFF112233, UiBackground.opaque(0x00112233).color());
+        assertTrue(UiBackground.translucent(0x88112233).paintsSurface());
+        assertFalse(UiBackground.transparent().paintsSurface());
+    }
+
+    @Test
+    void headerStylesMeasureCompactlyAndNoneConsumesNoSpace() {
+        UiTheme theme = UiTheme.roseLight();
+        UiHeader text = UiHeader.text(UiText.literal("Title"))
+            .subtitle(UiText.literal("Description"));
+        text.measure(RENDERER, 240, 200, theme);
+        assertEquals(UiHeaderStyle.TEXT, text.resolvedStyle());
+        assertEquals(32f, text.measuredHeight());
+
+        UiHeader none = UiHeader.text(UiText.literal("Hidden")).style(UiHeaderStyle.NONE);
+        none.measure(RENDERER, 240, 200, theme);
+        assertEquals(0f, none.measuredHeight());
+    }
+
+    @Test
+    void responsiveHeaderFallsBackToTextAtCompactWidth() {
+        UiHeader header = UiHeader.card(UiText.literal("Title")).responsive(true);
+        header.measure(RENDERER, 400, 200, UiTheme.roseLight());
+        assertEquals(UiHeaderStyle.TEXT, header.resolvedStyle());
     }
 
     private static final UiRenderer RENDERER = new UiRenderer() {
