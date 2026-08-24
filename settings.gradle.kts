@@ -98,7 +98,7 @@ stonecutter {
 }
 
 rootProject.name = "rethink-config-ui-lib"
-include(":core")
+include(":core", ":config")
 
 gradle.projectsLoaded {
     rootProject.pluginManager.apply("base")
@@ -146,6 +146,7 @@ gradle.projectsLoaded {
     }
     val licenseTaskPaths = buildList {
         add(":core:licenseCheck")
+        add(":config:licenseCheck")
         supportedVersions.forEach { version -> add(":common:$version:licenseCheck") }
         platformVersions.forEach { (platform, versions) ->
             versions.forEach { version -> add(":$platform:$version:licenseCheck") }
@@ -153,6 +154,7 @@ gradle.projectsLoaded {
     }
 
     rootProject.tasks.named("build") {
+        dependsOn(":config:build")
         dependsOn(loaderTaskPaths)
         dependsOn(validateVersionProperties)
         dependsOn(validateLicenseFile)

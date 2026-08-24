@@ -32,6 +32,40 @@ minecraft.setScreen(new UiScreen(previousScreen, page, UiTheme.roseLight()));
 render, mouse, scroll and keyboard callbacks to the host. Bindings write their
 new value immediately; persistence remains the responsibility of the host mod.
 
+### YAML configuration
+
+The optional `config` module provides a reflection-free Builder API and a
+threaded YAML store. It accepts a host-provided path, so loader code only needs
+to resolve the normal `config/<modid>.yaml` location:
+
+```java
+var spec = ConfigSpec.builder("totemdoll")
+    .schemaVersion(0)
+    .section("general", "General")
+        .booleanValue("enabled", true)
+        .integerValue("previewScale", 100, 25, 200, 25)
+        .endSection()
+    .section("filters", "Filters")
+        .listValue("blocks", List.of("minecraft:stone"), ConfigCodecs.STRING)
+        .endSection()
+    .build();
+
+try (var store = YamlConfigStore.open(spec, configDirectory.resolve("totemdoll.yaml"))) {
+    store.load();
+    @SuppressWarnings("unchecked")
+    ConfigEntry<Boolean> enabledEntry =
+        (ConfigEntry<Boolean>) spec.entry("general.enabled");
+    var enabled = UiBinding.of(enabledEntry::get, enabledEntry::set);
+    // Build the UI from enabled, then call store.flush() on Done.
+}
+```
+
+Values are validated before write-back. Changes are coalesced off the render
+thread, `flush()` and `close()` wait for pending writes, and saves use a
+temporary file followed by an atomic replacement when the filesystem supports
+it. Broken YAML and failed migrations are backed up before defaults are used;
+unknown sections and fields remain in the file.
+
 ### Core source layout
 
 The implementation is split by responsibility so layout work and control work

@@ -1,0 +1,34 @@
+/*
+ * Rethink Config UI Lib
+ * Copyright (C) 2026 RethinkQAQ
+ *
+ * This file is part of Rethink Config UI Lib.
+ *
+ * Rethink Config UI Lib is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, version 3 of the License.
+ *
+ * Rethink Config UI Lib is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.rethinkqaq.configui.config;
+
+import java.nio.file.Path;
+import java.util.Map;
+
+public final class ConfigSession {
+    private final ConfigSpec spec;
+    private final Path path;
+
+    ConfigSession(ConfigSpec spec, Path path) { this.spec = spec; this.path = path; }
+    public ConfigSpec spec() { return spec; }
+    public Path path() { return path; }
+    public ConfigEntry<?> entry(String entryPath) { return spec.entry(entryPath); }
+    public Map<String, ConfigEntry<?>> entries() { return spec.entries(); }
+}

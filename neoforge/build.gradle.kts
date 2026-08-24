@@ -1,4 +1,5 @@
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     id("multiloader-loader")
@@ -7,16 +8,26 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":config"))
+    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+    implementation(snakeYaml)
+    add("jarJar", snakeYaml)
 }
 
 // ModDev loads the registered source set directly during development rather than
 // the finished jar. Make core part of that output as well as the final artifact.
 val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 sourceSets.named("main") {
     output.dir(coreClasses)
+    output.dir(configClasses)
 }
 tasks.named("classes") {
-    dependsOn(":core:classes")
+    dependsOn(":core:classes", ":config:classes")
+}
+tasks.named<Jar>("sourcesJar") {
+    from(project(":core").file("src/main/java"))
+    from(project(":config").file("src/main/java"))
 }
 
 afterEvaluate {

@@ -3,6 +3,7 @@ import net.minecraftforge.renamer.gradle.RenamerExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.withGroovyBuilder
 
 buildscript {
@@ -78,13 +79,17 @@ repositories {
     maven(fg.minecraftLibsMaven)
 }
 
+val jarJarContainer = jarJar.register {
+    archiveClassifier = if (legacyObfuscation) "slim" else null
+}
 dependencies {
     implementation(project(":core"))
+    val configDependency = project.dependencies.project(mapOf("path" to ":config"))
+    implementation(configDependency)
+    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+    implementation(snakeYaml)
+    add(jarJarContainer.configurationName, snakeYaml)
     implementation(minecraft.dependency("net.minecraftforge:forge:${commonMod.mc}-${commonMod.dep("forge")}"))
-}
-
-jarJar.register {
-    archiveClassifier = if (legacyObfuscation) "slim" else null
 }
 val jarJarTask = tasks.named<JarJar>("jarJar")
 
@@ -133,6 +138,15 @@ tasks.jar {
 // directory prevents Forge's module layer from seeing a split package ("main"
 // plus the mod file).
 val forgeCompileClasses = layout.buildDirectory.dir("classes/java/main")
+val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
+sourceSets["main"].output.dir(configClasses)
+tasks.named("classes") {
+    dependsOn(":core:classes", ":config:classes")
+}
+tasks.named<Jar>("sourcesJar") {
+    from(project(":core").file("src/main/java"))
+    from(project(":config").file("src/main/java"))
+}
 sourceSets["main"].output.setResourcesDir(forgeCompileClasses)
 val prepareForgeDevMod = tasks.register("prepareForgeDevMod") {
     dependsOn("classes", "processResources")

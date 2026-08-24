@@ -1,5 +1,6 @@
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     id("multiloader-loader")
@@ -8,6 +9,11 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    val configDependency = project.dependencies.project(mapOf("path" to ":config"))
+    implementation(configDependency)
+    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+    implementation(snakeYaml)
+    include(snakeYaml)
     minecraft("com.mojang:minecraft:${commonMod.mc}")
     if (!commonMod.unobfuscated) {
         mappings(loom.layered {
@@ -36,11 +42,18 @@ configurations.configureEach {
 // Loom development runs use the source-set output directly. Include core there
 // too, while the normal Java jar task packages the same output for distribution.
 val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 sourceSets.named("main") {
     output.dir(coreClasses)
+    output.dir(configClasses)
 }
 tasks.named("classes") {
-    dependsOn(":core:classes")
+    dependsOn(":core:classes", ":config:classes")
+}
+
+tasks.named<Jar>("sourcesJar") {
+    from(project(":core").file("src/main/java"))
+    from(project(":config").file("src/main/java"))
 }
 
 afterEvaluate {
