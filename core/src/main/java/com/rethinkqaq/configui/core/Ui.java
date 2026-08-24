@@ -224,6 +224,7 @@ public final class Ui {
     }
     public static class Panel extends UiPanel {
         @Override public Panel color(int value) { super.color(value); return this; }
+        @Override public Panel padding(float value) { super.padding(value); return this; }
         @Override public Panel gap(float value) { super.gap(value); return this; }
         @Override public Panel add(Node child) { super.add(child); return this; }
     }

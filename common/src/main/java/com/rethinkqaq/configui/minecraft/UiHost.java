@@ -75,7 +75,10 @@ public final class UiHost {
             root.measure(renderer, availableWidth, availableHeight, theme);
             float contentWidth = Math.min(availableWidth, root.measuredWidth());
             float contentHeight = Math.min(availableHeight, root.measuredHeight());
-            float contentX = layoutMode == LayoutMode.CONTENT ? (canvasWidth - contentWidth) / 2f : horizontalInset;
+            // FULLSCREEN is still a responsive shell, not a left-aligned canvas. When the
+            // scaffold reaches its max width, center it like a web page while retaining the
+            // inset when the logical viewport is narrower than that cap.
+            float contentX = (canvasWidth - contentWidth) / 2f;
             float contentY = verticalInset;
             root.layout(renderer, new com.rethinkqaq.configui.core.UiBounds(
                 contentX, contentY, contentWidth, contentHeight), theme);

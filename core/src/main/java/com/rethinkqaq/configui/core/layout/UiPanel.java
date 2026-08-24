@@ -26,6 +26,7 @@ import com.rethinkqaq.configui.core.UiTheme;
 /** A padded, themed surface containing vertically arranged children. */
 public class UiPanel extends UiColumn {
     private int color = Integer.MIN_VALUE;
+    private float customPadding = -1;
 
     public UiPanel color(int value) {
         color = value;
@@ -34,17 +35,28 @@ public class UiPanel extends UiColumn {
 
     public int color() { return color; }
 
+    /** Overrides the theme padding for this panel, useful for compact headers and toolbars. */
+    public UiPanel padding(float value) {
+        if (value < 0) throw new IllegalArgumentException("panel padding must be non-negative");
+        customPadding = value;
+        invalidateLayout();
+        return this;
+    }
+
+    public float padding(UiTheme theme) { return customPadding < 0 ? theme.metrics().padding() : customPadding; }
+
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        super.measureSelf(renderer, Math.max(0, maxWidth - theme.metrics().padding() * 2), maxHeight, theme);
-        measuredWidth = Math.min(Math.max(0, maxWidth), measuredWidth + theme.metrics().padding() * 2);
-        measuredHeight = Math.min(Math.max(0, maxHeight), measuredHeight + theme.metrics().padding() * 2);
+        float padding = padding(theme);
+        super.measureSelf(renderer, Math.max(0, maxWidth - padding * 2), maxHeight, theme);
+        measuredWidth = Math.min(Math.max(0, maxWidth), measuredWidth + padding * 2);
+        measuredHeight = Math.min(Math.max(0, maxHeight), measuredHeight + padding * 2);
     }
 
     @Override
     public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
-        super.layout(renderer, value.inset(theme.metrics().padding()), theme);
+        super.layout(renderer, value.inset(padding(theme)), theme);
         bounds = value;
     }
 

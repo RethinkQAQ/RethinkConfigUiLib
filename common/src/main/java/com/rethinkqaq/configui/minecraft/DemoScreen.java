@@ -44,6 +44,7 @@ public final class DemoScreen extends UiScreen {
         AtomicReference<String> mode = new AtomicReference<>("Balanced");
 
         Ui.Container header = Ui.panel()
+            .padding(8)
             .add(Ui.label(UiText.literal("RETHINK CONFIG UI LIB")))
             .add(Ui.label(UiText.literal("Modern, dependency-free UI surfaces for configuration and custom pages")).wrap(true));
 
