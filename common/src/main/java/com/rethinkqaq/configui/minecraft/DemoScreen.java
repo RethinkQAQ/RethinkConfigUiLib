@@ -36,7 +36,6 @@ public final class DemoScreen extends UiScreen {
 
     public DemoScreen(Screen parent) {
         super(parent, page(), UiTheme.roseLight(), UiHost.LayoutMode.FULLSCREEN);
-        host().scalePolicy(UiScalePolicy.adaptive());
     }
 
     private static Ui.Node page() {

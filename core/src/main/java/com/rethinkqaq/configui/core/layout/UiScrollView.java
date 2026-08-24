@@ -45,6 +45,8 @@ public class UiScrollView extends Ui.Container {
     @Override
     public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
+        float maximum = Math.max(0, child().measuredHeight() - value.height());
+        offset = Math.max(0, Math.min(maximum, offset));
         child().layout(renderer, new UiBounds(value.x(), value.y() - offset, value.width(), child().measuredHeight()), theme);
     }
 

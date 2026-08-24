@@ -37,8 +37,8 @@ public class UiPanel extends UiColumn {
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         super.measureSelf(renderer, Math.max(0, maxWidth - theme.metrics().padding() * 2), maxHeight, theme);
-        measuredWidth += theme.metrics().padding() * 2;
-        measuredHeight += theme.metrics().padding() * 2;
+        measuredWidth = Math.min(Math.max(0, maxWidth), measuredWidth + theme.metrics().padding() * 2);
+        measuredHeight = Math.min(Math.max(0, maxHeight), measuredHeight + theme.metrics().padding() * 2);
     }
 
     @Override

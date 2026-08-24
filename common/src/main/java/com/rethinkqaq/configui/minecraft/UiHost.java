@@ -39,7 +39,6 @@ public final class UiHost {
     private Ui.Node focused;
     private UiRenderer renderer;
     private final LayoutMode layoutMode;
-    private UiScalePolicy scalePolicy = UiScalePolicy.minecraft();
 
     public UiHost(Ui.Node root, UiTheme theme) {
         this(root, theme, LayoutMode.CONTENT);
@@ -53,35 +52,23 @@ public final class UiHost {
 
     public UiTheme theme() { return theme; }
     public Ui.Node root() { return root; }
-    /** Changes the policy used to map this surface onto Minecraft's selected GUI scale. */
-    public UiHost scalePolicy(UiScalePolicy value) {
-        scalePolicy = Objects.requireNonNull(value, "scalePolicy");
-        width = -1;
-        height = -1;
-        return this;
-    }
-    public UiScalePolicy scalePolicy() { return scalePolicy; }
-    /** Returns the current UI canvas transform for a Minecraft GUI Scale value. */
-    public float contentScale(double minecraftGuiScale) { return scalePolicy.contentScale(minecraftGuiScale); }
-
     public void render(UiRenderer renderer, int screenWidth, int screenHeight, int mouseX, int mouseY) {
         render(renderer, screenWidth, screenHeight, 1d, mouseX, mouseY);
     }
     /**
-     * Renders against Minecraft's logical screen size. The passed GUI scale is only used by the
-     * optional scale policy; no Minecraft type is exposed to core.
+     * Renders against Minecraft's logical screen size. The GUI scale argument is accepted for
+     * platform-call compatibility, but never creates a second coordinate system.
      */
     public void render(UiRenderer renderer, int screenWidth, int screenHeight, double minecraftGuiScale, int mouseX, int mouseY) {
         this.renderer = renderer;
-        float contentScale = contentScale(minecraftGuiScale);
-        int canvasWidth = Math.max(1, Math.round(screenWidth / contentScale));
-        int canvasHeight = Math.max(1, Math.round(screenHeight / contentScale));
+        int canvasWidth = Math.max(1, screenWidth);
+        int canvasHeight = Math.max(1, screenHeight);
         long currentRevision = layoutRevision(root);
         if (width != canvasWidth || height != canvasHeight || layoutRevision != currentRevision) {
             width = canvasWidth; height = canvasHeight;
             layoutRevision = currentRevision;
-            float horizontalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
-            float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 16 : 24;
+            float horizontalInset = layoutMode == LayoutMode.FULLSCREEN ? 12 : 20;
+            float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 12 : 20;
             float availableWidth = Math.max(0, canvasWidth - horizontalInset * 2);
             if (layoutMode == LayoutMode.CONTENT) availableWidth = Math.min(availableWidth, 540);
             float availableHeight = Math.max(0, canvasHeight - verticalInset * 2);
@@ -93,8 +80,8 @@ public final class UiHost {
             root.layout(renderer, new com.rethinkqaq.configui.core.UiBounds(
                 contentX, contentY, contentWidth, contentHeight), theme);
         }
-        float canvasMouseX = mouseX / contentScale;
-        float canvasMouseY = mouseY / contentScale;
+        float canvasMouseX = mouseX;
+        float canvasMouseY = mouseY;
         updateHovered(root, canvasMouseX, canvasMouseY);
         advanceMotion(root, System.nanoTime());
         root.render(renderer, theme);
