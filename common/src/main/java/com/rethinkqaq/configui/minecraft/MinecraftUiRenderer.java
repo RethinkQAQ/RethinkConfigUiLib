@@ -134,9 +134,9 @@ public final class MinecraftUiRenderer implements UiRenderer {
     @Override public void popClip() { graphics.disableScissor(); }
 
     /**
-     * GuiGraphics transforms scissor coordinates by the current UI pose.  Keep one physical
-     * pixel of margin so SDF/text antialias pixels at a rounded edge are not discarded by an
-     * inclusive/exclusive integer conversion (especially when adaptive scaling is below 1).
+     * GuiGraphics transforms scissor coordinates by the current UI pose. Keep one logical pixel
+     * of margin so SDF/text antialias pixels at a rounded edge are not discarded by an
+     * inclusive/exclusive integer conversion.
      */
     private void enableScissorWithAntialiasMargin(UiBounds box) {
         float margin = 1f / Math.max(.25f, coordinateScale);
@@ -147,7 +147,7 @@ public final class MinecraftUiRenderer implements UiRenderer {
             Math.round(box.y() + box.height() + margin));
         *///?} else {
         // DrawContext (1.20.x-1.21.4) keeps scissor coordinates in screen space and does not
-        // transform them by the pose, so apply the UI scale explicitly here.
+        // transform them by the pose. coordinateScale is one for the native logical viewport.
         graphics.enableScissor(Math.round((box.x() - margin) * coordinateScale),
             Math.round((box.y() - margin) * coordinateScale),
             Math.round((box.x() + box.width() + margin) * coordinateScale),

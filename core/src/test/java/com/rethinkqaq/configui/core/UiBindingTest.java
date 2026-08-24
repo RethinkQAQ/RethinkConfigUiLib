@@ -138,8 +138,8 @@ class UiBindingTest {
     @Test
     void scaffoldDoesNotReserveSpaceForAnAbsentFooter() {
         UiScaffold scaffold = Ui.scaffold(Ui.label(UiText.literal("Content")));
-        scaffold.measure(RENDERER, 300, 120, UiTheme.roseLight());
-        scaffold.layout(RENDERER, new UiBounds(0, 0, 300, 120), UiTheme.roseLight());
+        scaffold.measure(RENDERER, 500, 120, UiTheme.roseLight());
+        scaffold.layout(RENDERER, new UiBounds(0, 0, 500, 120), UiTheme.roseLight());
         assertEquals(120, scaffold.content().bounds().height());
     }
 
@@ -199,11 +199,56 @@ class UiBindingTest {
         Ui.Node header = Ui.panel().add(Ui.label(UiText.literal("Header")));
         UiScaffold scaffold = Ui.scaffold(pages).header(header).navigation(pages.navigation())
             .navigationMode(UiScaffold.NavigationMode.TOP).regionGap(8);
-        scaffold.measure(RENDERER, 300, 120, UiTheme.roseLight());
-        scaffold.layout(RENDERER, new UiBounds(0, 0, 300, 120), UiTheme.roseLight());
+        scaffold.measure(RENDERER, 500, 120, UiTheme.roseLight());
+        scaffold.layout(RENDERER, new UiBounds(0, 0, 500, 120), UiTheme.roseLight());
         assertTrue(pages.navigation().bounds().y() >= header.bounds().y() + header.bounds().height() + 8);
         assertTrue(pages.bounds().y() >= pages.navigation().bounds().y() + pages.navigation().bounds().height() + 8);
         assertTrue(pages.bounds().height() >= 0);
+    }
+
+    @Test
+    void scaffoldHidesOptionalHeaderOnlyBelowSmallViewportBreakpoint() {
+        Ui.Node header = Ui.panel().add(Ui.label(UiText.literal("Header")));
+        UiScaffold scaffold = Ui.scaffold(Ui.label(UiText.literal("Content")))
+            .header(header).navigationMode(UiScaffold.NavigationMode.TOP);
+
+        scaffold.measure(RENDERER, 320, 120, UiTheme.roseLight());
+        scaffold.layout(RENDERER, new UiBounds(0, 0, 320, 120), UiTheme.roseLight());
+        assertFalse(scaffold.headerVisible());
+        assertEquals(0, scaffold.content().bounds().y());
+
+        scaffold.measure(RENDERER, 360, 120, UiTheme.roseLight());
+        scaffold.layout(RENDERER, new UiBounds(0, 0, 360, 120), UiTheme.roseLight());
+        assertTrue(scaffold.headerVisible());
+        assertTrue(scaffold.content().bounds().y() > header.bounds().y());
+    }
+
+    @Test
+    void settingRowUsesSingleColumnAtResponsiveBreakpoint() {
+        UiSettingRow row = Ui.settingRow(UiText.literal("Feature"),
+            Ui.toggle(UiText.literal(""), UiBinding.of(() -> false, value -> { })));
+        row.measure(RENDERER, 560, 200, UiTheme.roseLight());
+        row.layout(RENDERER, new UiBounds(0, 0, 560, row.measuredHeight()), UiTheme.roseLight());
+        assertTrue(row.control().bounds().y() > row.bounds().y());
+    }
+
+    @Test
+    void scaffoldKeepsResponsiveRegionsValidAcrossLogicalWidths() {
+        UiPageHost pages = Ui.pageHost()
+            .addPage(UiText.literal("General"), Ui.column().add(Ui.label(UiText.literal("Content"))))
+            .addPage(UiText.literal("Preview"), Ui.label(UiText.literal("Preview")));
+        UiScaffold scaffold = Ui.scaffold(pages)
+            .header(Ui.panel().add(Ui.label(UiText.literal("Optional header"))))
+            .navigation(pages.navigation())
+            .navigationMode(UiScaffold.NavigationMode.TOP);
+
+        for (float width : new float[] {320, 360, 440, 560, 760, 1080}) {
+            scaffold.measure(RENDERER, width, 180, UiTheme.roseLight());
+            scaffold.layout(RENDERER, new UiBounds(0, 0, width, 180), UiTheme.roseLight());
+            assertTrue(scaffold.content().bounds().width() >= 0);
+            assertTrue(scaffold.content().bounds().height() >= 0);
+            assertTrue(pages.navigation().bounds().height() >= 0);
+        }
     }
 
     @Test

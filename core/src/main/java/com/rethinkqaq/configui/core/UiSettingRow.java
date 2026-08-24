@@ -26,7 +26,8 @@ import java.util.Objects;
  * It becomes vertical in a narrow viewport and keeps the control aligned on the right otherwise.
  */
 public final class UiSettingRow extends Ui.Node implements Ui.ChildProvider {
-    private static final float COMPACT_WIDTH = 420;
+    /** Logical width below which the label and control use a vertical flow. */
+    private static final float COMPACT_WIDTH = 760;
     private final UiText label;
     private UiText description;
     private final Ui.Node control;

@@ -51,27 +51,19 @@ version-specific `common` adapter.
 
 ### GUI Scale policy
 
-`UiScreen` respects the player's Minecraft GUI Scale by default. A standalone
-configuration page can instead keep its controls and original-font text near a
-chosen physical size without changing the player's option:
+`UiScreen` uses Minecraft's logical GUI coordinate system directly. The renderer
+does not apply a second inverse transform, so higher GUI scales naturally expose
+a smaller logical viewport and responsive layouts can reflow around it:
 
 ```java
 var screen = new UiScreen(previousScreen, page, UiTheme.roseLight());
-screen.host().scalePolicy(UiScalePolicy.adaptive()); // Reference: Minecraft GUI Scale 4
 minecraft.setScreen(screen);
 ```
 
-The built-in demo uses this policy. For a different visual baseline, provide a
-bounded custom policy:
-
-```java
-screen.host().scalePolicy(UiScalePolicy.builder(3f)
-    .minimumContentScale(.75f)
-    .maximumContentScale(2.5f)
-    .build());
-```
-
-Use `UiScalePolicy.minecraft()` to retain strict vanilla GUI-scale behaviour.
+`UiScalePolicy.minecraft()` is the only supported policy API in v1. `UiHost`
+already uses this native coordinate contract directly; components should adapt
+through measurement and layout (wrapping, stacking and scrolling), not by
+applying a global UI scale.
 
 ## Build and local Maven
 

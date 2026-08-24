@@ -165,7 +165,11 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
          * Flat by default: separation comes from the surface and a subtle border, not a
          * hard offset shadow. Hosts which need elevation can still opt in per theme.
          */
-        public static UiMetrics comfortable() { return new UiMetrics(12, 12, 16, 40, .65f, 16, 12, 0); }
+        /**
+         * Balanced default dimensions: compact enough for high GUI scales while retaining
+         * comfortable hit targets and breathing room around labels.
+         */
+        public static UiMetrics comfortable() { return new UiMetrics(10, 9, 12, 34, .5f, 13, 10, 0); }
     }
 
     /** Motion durations. Renderers may ignore motion when animation is disabled by a host. */

@@ -29,6 +29,7 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
     private final List<Placement> placements = new ArrayList<>();
     private float gap;
     private int rows;
+    private UiTheme buttonTheme;
 
     UiNavigationBar(UiPageHost owner) { host = owner; }
 
@@ -36,14 +37,15 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         syncButtons();
-        gap = theme.metrics().spacing();
+        buttonTheme = compactTheme(theme);
+        gap = buttonTheme.metrics().spacing();
         placements.clear();
         float x = 0, rowHeight = 0, totalHeight = 0;
         rows = 0;
         for (int index = 0; index < buttons.size(); index++) {
             Ui.Button button = buttons.get(index);
             button.variant(index == host.selectedIndex() ? Ui.ButtonVariant.PRIMARY : Ui.ButtonVariant.SECONDARY);
-            button.measure(renderer, Math.max(1, maxWidth), maxHeight, theme);
+            button.measure(renderer, Math.max(1, maxWidth), maxHeight, buttonTheme);
             float width = Math.min(maxWidth, button.measuredWidth());
             if (x > 0 && x + width > maxWidth) {
                 totalHeight += rowHeight + gap;
@@ -75,13 +77,15 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
         }
         for (Placement placement : placements) {
             Ui.Button button = buttons.get(placement.index());
-            button.layout(renderer, new UiBounds(value.x() + placement.x(), rowY[placement.row()], placement.width(), rowHeights[placement.row()]), theme);
+            button.layout(renderer, new UiBounds(value.x() + placement.x(), rowY[placement.row()], placement.width(), rowHeights[placement.row()]),
+                buttonTheme == null ? theme : buttonTheme);
         }
     }
 
     @Override public void render(UiRenderer renderer, UiTheme theme) {
         syncButtons();
-        for (Ui.Button button : buttons) button.render(renderer, theme);
+        UiTheme activeTheme = buttonTheme == null ? theme : buttonTheme;
+        for (Ui.Button button : buttons) button.render(renderer, activeTheme);
     }
 
     @Override public boolean click(float x, float y, int button) {
@@ -121,6 +125,21 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
             buttons.add(Ui.button(host.pageTitle(index), () -> host.select(index)));
         }
         while (buttons.size() > host.pageCount()) buttons.remove(buttons.size() - 1);
+    }
+
+    /** Category tabs use a lighter footprint than ordinary action buttons. */
+    private static UiTheme compactTheme(UiTheme theme) {
+        UiTheme.UiMetrics metrics = theme.metrics();
+        UiTheme.UiMetrics compact = new UiTheme.UiMetrics(
+            Math.max(6, metrics.radius() * .8f),
+            Math.max(5, metrics.spacing() * .7f),
+            Math.max(7, metrics.padding() * .7f),
+            Math.max(26, metrics.controlHeight() * .82f),
+            metrics.borderWidth(),
+            Math.max(8, metrics.cardRadius() * .8f),
+            Math.max(7, metrics.controlRadius() * .8f),
+            metrics.shadowOffset());
+        return theme.withMetrics(compact);
     }
 
     private record Placement(int index, float x, float width, int row) { }

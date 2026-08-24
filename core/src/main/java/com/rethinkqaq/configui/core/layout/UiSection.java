@@ -38,9 +38,11 @@ public class UiSection extends UiPanel {
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+        float childMaxHeight = Math.max(0, maxHeight - renderer.lineHeight() - theme.metrics().spacing());
         super.measureSelf(renderer, maxWidth,
-            maxHeight - renderer.lineHeight() - theme.metrics().spacing(), theme);
-        measuredHeight += renderer.lineHeight() + theme.metrics().spacing();
+            childMaxHeight, theme);
+        measuredHeight = Math.min(Math.max(0, maxHeight),
+            measuredHeight + renderer.lineHeight() + theme.metrics().spacing());
     }
 
     @Override

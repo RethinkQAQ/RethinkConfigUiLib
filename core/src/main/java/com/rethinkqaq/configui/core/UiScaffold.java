@@ -26,7 +26,8 @@ import java.util.Objects;
  * absent regions reserve no space.
  */
 public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
-    private static final float COMPACT_WIDTH = 440;
+    private static final float HEADER_HIDE_WIDTH = 360;
+    private static final float COMPACT_WIDTH = 760;
     /** Selects which navigation region is active for this frame. */
     public enum NavigationMode { SIDEBAR, TOP }
 
@@ -40,6 +41,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
     private float regionGap = -1;
     private float maxContentWidth = 1200;
     private boolean compact;
+    private boolean headerVisible;
     private float headerHeight, navigationHeight, sidebarHeight, footerHeight;
 
     UiScaffold(Ui.Node content) { this.content = Objects.requireNonNull(content, "content"); }
@@ -72,9 +74,11 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
     public Ui.Node content() { return content; }
     public Ui.Node navigation() { return navigation; }
     public NavigationMode navigationMode() { return navigationMode; }
+    /** Returns whether the optional header is present at the current logical width. */
+    public boolean headerVisible() { return headerVisible; }
     @Override public java.util.List<Ui.Node> childNodes() {
         java.util.ArrayList<Ui.Node> result = new java.util.ArrayList<>();
-        if (header != null) result.add(header);
+        if (headerVisible) result.add(header);
         if (navigationMode == NavigationMode.TOP) {
             if (navigation != null) result.add(navigation);
         } else if (sidebar != null) {
@@ -90,11 +94,12 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         float shellWidth = shellWidth(maxWidth);
         compact = shellWidth < COMPACT_WIDTH;
         float gap = gap(theme);
-        headerHeight = measureHeight(header, renderer, shellWidth, maxHeight, theme);
+        headerVisible = header != null && shellWidth >= HEADER_HIDE_WIDTH;
+        headerHeight = headerVisible ? measureHeight(header, renderer, shellWidth, maxHeight, theme) : 0;
         footerHeight = measureHeight(footer, renderer, shellWidth, maxHeight, theme);
         navigationHeight = navigationMode == NavigationMode.TOP
             ? measureHeight(navigation, renderer, shellWidth, maxHeight, theme) : 0;
-        float verticalGaps = (header == null ? 0 : gap)
+        float verticalGaps = (!headerVisible ? 0 : gap)
             + (navigationMode == NavigationMode.TOP && navigation != null ? gap : 0)
             + (footer == null ? 0 : gap);
         float bodyHeight = Math.max(0, maxHeight - headerHeight - footerHeight - verticalGaps);
@@ -126,7 +131,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         float x = value.x() + (value.width() - shellWidth) / 2f;
         float gap = gap(theme);
         float y = value.y();
-        if (header != null) {
+        if (headerVisible) {
             header.layout(renderer, new UiBounds(x, y, shellWidth, headerHeight), theme);
             y += headerHeight + gap;
         }
@@ -135,7 +140,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
             y += navigationHeight + gap;
         }
         float bodyHeight = Math.max(0, value.height() - headerHeight - footerHeight
-            - (header == null ? 0 : gap)
+            - (!headerVisible ? 0 : gap)
             - (navigationMode == NavigationMode.TOP && navigation != null ? navigationHeight + gap : 0)
             - (footer == null ? 0 : gap));
         if (navigationMode == NavigationMode.TOP || sidebar == null) {
@@ -155,7 +160,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
-        if (header != null) header.render(renderer, theme);
+        if (headerVisible) header.render(renderer, theme);
         if (navigationMode == NavigationMode.TOP) {
             if (navigation != null) navigation.render(renderer, theme);
         } else if (sidebar != null) {
@@ -169,7 +174,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         return (footer != null && footer.click(x, y, button)) || content.click(x, y, button)
             || (navigationMode == NavigationMode.TOP && navigation != null && navigation.click(x, y, button))
             || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.click(x, y, button))
-            || (header != null && header.click(x, y, button));
+            || (headerVisible && header.click(x, y, button));
     }
     @Override public boolean scroll(float x, float y, double amount) {
         return content.scroll(x, y, amount)
