@@ -24,6 +24,12 @@ public interface ConfigCodec<T> {
 
     T decode(Object value) throws ConfigCodecException;
 
+    final class None implements ConfigCodec<Object> {
+        private None() { }
+        @Override public Object encode(Object value) { return value; }
+        @Override public Object decode(Object value) { return value; }
+    }
+
     @FunctionalInterface
     interface Decoder<T> {
         T decode(Object value) throws ConfigCodecException;

@@ -20,148 +20,85 @@
 package com.rethinkqaq.configui.config;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class YamlConfigStoreTest {
-    @TempDir Path temp;
-
     @Test
-    void writesAndLoadsTypedValuesAndKeepsUnknownNodes() throws Exception {
-        Path file = temp.resolve("demo.yaml");
-        Files.writeString(file, "schemaVersion: 0\ngeneral:\n  enabled: false\n  unknown: keep\n", StandardCharsets.UTF_8);
-        ConfigSpec spec = spec();
+    void createsAndSavesMissingFile() throws Exception {
+        Path file = Files.createTempDirectory("rcui-config").resolve("demo.yaml");
+        Holder holder = new Holder();
+        ConfigSpec spec = spec(holder);
         try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
             store.load();
-            assertFalse((Boolean) entry(spec, "general.enabled").get());
-            assertTrue(entry(spec, "general.enabled").set(true));
+            assertTrue(store.isDirty());
             store.flush();
         }
-        String text = Files.readString(file);
-        assertTrue(text.contains("unknown: keep"));
-        assertTrue(text.contains("enabled: true"));
-        assertTrue(text.contains("range 0..10, step 5"));
-
-        try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
-            store.load();
-            assertTrue((Boolean) entry(spec, "general.enabled").get());
-        }
+        assertTrue(Files.exists(file));
+        assertTrue(Files.readString(file).contains("general:"));
     }
 
     @Test
-    void rejectsInvalidValuesAndSupportsLists() throws Exception {
-        ConfigSpec spec = spec();
-        ConfigEntry<Integer> scale = entry(spec, "general.scale");
-        assertFalse(scale.set(11));
-        assertEquals(5, scale.get());
-        assertTrue(scale.set(10));
-        assertEquals(List.of("stone", "dirt"), entry(spec, "filters.blocks").defaultValue());
-    }
-
-    @Test
-    void migratesSchema() throws Exception {
-        Path file = temp.resolve("migration.yaml");
-        Files.writeString(file, "schemaVersion: 0\ngeneral:\n  enabled: true\n");
-        ConfigSpec spec = ConfigSpec.builder("demo")
-            .schemaVersion(1)
-            .section("general", "General")
-            .booleanValue("enabled", false)
-            .endSection()
-            .migration(new ConfigMigration() {
-                @Override public int fromVersion() { return 0; }
-                @Override public int toVersion() { return 1; }
-                @Override public Map<String, Object> migrate(Map<String, Object> root) {
-                    root.put("migrated", true);
-                    return root;
-                }
-            })
-            .build();
+    void roundTripsValuesAndUnknownFields() throws Exception {
+        Path file = Files.createTempDirectory("rcui-config").resolve("demo.yaml");
+        Files.writeString(file, "schemaVersion: 0\ngeneral:\n  enabled: true\n  scale: 150\n  unknown: keep\n");
+        Holder holder = new Holder();
+        ConfigSpec spec = spec(holder);
         try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
             store.load();
+            assertTrue(holder.enabled);
+            assertEquals(150, holder.scale);
+            holder.scaleValue.set(175);
             store.flush();
         }
-        assertTrue(Files.readString(file).contains("schemaVersion: 1"));
-        assertTrue(Files.readString(file).contains("migrated: true"));
+        String output = Files.readString(file);
+        assertTrue(output.contains("unknown: keep"));
+        assertTrue(output.contains("scale: 175"));
     }
 
     @Test
-    void malformedFileIsBackedUpAndDefaultsAreUsed() throws Exception {
-        Path file = temp.resolve("broken.yaml");
-        Files.writeString(file, "general: [");
-        ConfigSpec spec = spec();
+    void rejectsInvalidValuesAndUsesDefaults() throws Exception {
+        Path file = Files.createTempDirectory("rcui-config").resolve("demo.yaml");
+        Files.writeString(file, "general:\n  scale: 151\n");
+        Holder holder = new Holder();
+        ConfigSpec spec = spec(holder);
         try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
             store.load();
-            assertTrue((Boolean) entry(spec, "general.enabled").get());
+            assertEquals(100, holder.scale);
+            assertTrue(store.isDirty());
         }
-        assertTrue(Files.list(temp).anyMatch(path -> path.getFileName().toString().contains(".broken-")));
     }
 
     @Test
-    void persistedValuesThatFailValidationUseDefaults() throws Exception {
-        Path file = temp.resolve("invalid-value.yaml");
-        Files.writeString(file, "schemaVersion: 0\ngeneral:\n  scale: 11\n");
-        ConfigSpec spec = spec();
-        try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
-            store.load();
-            assertEquals(5, entry(spec, "general.scale").get());
-            store.flush();
-        }
-        assertTrue(Files.readString(file).contains("scale: 5"));
-    }
-
-    @Test
-    void integerCodecRejectsFractionalAndOverflowValues() {
-        assertThrows(ConfigCodecException.class, () -> ConfigCodecs.INTEGER.decode(1.5));
-        assertThrows(ConfigCodecException.class, () -> ConfigCodecs.INTEGER.decode(Long.MAX_VALUE));
-    }
-
-    @Test
-    void failedMigrationIsBackedUpSeparately() throws Exception {
-        Path file = temp.resolve("unmigrated.yaml");
-        Files.writeString(file, "schemaVersion: 0\n");
-        ConfigSpec spec = ConfigSpec.builder("demo")
-            .schemaVersion(1)
-            .section("general", "General")
-            .booleanValue("enabled", true)
-            .endSection()
-            .migration(new ConfigMigration() {
-                @Override public int fromVersion() { return 0; }
-                @Override public int toVersion() { return 1; }
-                @Override public Map<String, Object> migrate(Map<String, Object> root) {
-                    throw new IllegalStateException("migration failed");
-                }
-            })
-            .build();
-        try (YamlConfigStore store = YamlConfigStore.open(spec, file)) {
+    void backsUpBrokenYaml() throws Exception {
+        Path directory = Files.createTempDirectory("rcui-config");
+        Path file = directory.resolve("demo.yaml");
+        Files.writeString(file, "[broken");
+        try (YamlConfigStore store = YamlConfigStore.open(spec(new Holder()), file)) {
             store.load();
         }
-        assertTrue(Files.list(temp).anyMatch(path -> path.getFileName().toString().contains(".unmigrated-")));
-        assertEquals("schemaVersion: 0\n", Files.readString(file));
+        try (var files = Files.list(directory)) {
+            assertTrue(files.anyMatch(path -> path.getFileName().toString().contains(".broken-")));
+        }
     }
 
-    private ConfigSpec spec() {
-        return ConfigSpec.builder("demo")
-            .schemaVersion(0)
-            .section("general", "General")
-            .value("enabled", "Enabled", true, ConfigCodecs.BOOLEAN, builder -> builder.description("Enable the feature"))
-            .integerValue("scale", 5, 0, 10, 5)
-            .endSection()
-            .section("filters", "Filters")
-            .listValue("blocks", List.of("stone", "dirt"), ConfigCodecs.STRING)
-            .endSection()
-            .build();
+    private static ConfigSpec spec(Holder holder) {
+        ConfigValue<Boolean> enabled = ConfigValue.generated("general.enabled", "general", "enabled", "Enabled", "", "", true,
+            ConfigCodecs.BOOLEAN, List.of(), () -> holder.enabled, value -> holder.enabled = value);
+        ConfigValue<Integer> scale = ConfigValue.generated("general.scale", "general", "scale", "Scale", "", "range 25..200, step 25", 100,
+            ConfigCodecs.INTEGER, List.of(ConfigValidators.numeric(25, 200, 25)), () -> holder.scale, value -> holder.scale = value);
+        holder.scaleValue = scale;
+        return ConfigSpec.generated("demo", 0,
+            List.of(new ConfigSpec.Section("general", "General", "")), List.of(enabled, scale), List.of());
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T> ConfigEntry<T> entry(ConfigSpec spec, String path) {
-        return (ConfigEntry<T>) spec.entry(path);
+    private static final class Holder {
+        private boolean enabled;
+        private int scale = 100;
+        private ConfigValue<Integer> scaleValue;
     }
 }

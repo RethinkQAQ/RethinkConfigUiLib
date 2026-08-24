@@ -17,18 +17,24 @@
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.rethinkqaq.configui.config;
+package com.rethinkqaq.configui.config.annotation;
 
-import java.nio.file.Path;
-import java.util.Map;
+import com.rethinkqaq.configui.config.ConfigCodec;
 
-public final class ConfigSession {
-    private final ConfigSpec spec;
-    private final Path path;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    ConfigSession(ConfigSpec spec, Path path) { this.spec = spec; this.path = path; }
-    public ConfigSpec spec() { return spec; }
-    public Path path() { return path; }
-    public ConfigEntry<?> entry(String entryPath) { return spec.entry(entryPath); }
-    public Map<String, ConfigEntry<?>> entries() { return spec.entries(); }
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.FIELD)
+public @interface Setting {
+    String section() default "general";
+    String key() default "";
+    String title() default "";
+    String description() default "";
+    double min() default -1.7976931348623157E308;
+    double max() default 1.7976931348623157E308;
+    double step() default 0.0;
+    Class<? extends ConfigCodec> codec() default ConfigCodec.None.class;
 }

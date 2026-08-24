@@ -14,6 +14,8 @@ java {
 repositories { mavenCentral() }
 
 dependencies {
+    compileOnly(project(":core"))
+    testImplementation(project(":core"))
     api("org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}")
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

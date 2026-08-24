@@ -34,37 +34,43 @@ new value immediately; persistence remains the responsibility of the host mod.
 
 ### YAML configuration
 
-The optional `config` module provides a reflection-free Builder API and a
-threaded YAML store. It accepts a host-provided path, so loader code only needs
-to resolve the normal `config/<modid>.yaml` location:
+The optional `config` module uses `@RcuiConfig` and `@Setting` to keep the
+configuration definition visible beside the model fields. The same module
+contains the compile-time processor and the threaded YAML store; no runtime
+reflection is used. A host normally adds the platform library as
+`implementation` and the config artifact as `annotationProcessor`:
+
+```kotlin
+implementation("com.rethinkqaq.configui:rethink-config-ui-lib-fabric:<mc>-<version>")
+annotationProcessor("com.rethinkqaq.configui:rethink-config-ui-lib-config:<version>")
+```
 
 ```java
-var spec = ConfigSpec.builder("totemdoll")
-    .schemaVersion(0)
-    .section("general", "General")
-        .booleanValue("enabled", true)
-        .integerValue("previewScale", 100, 25, 200, 25)
-        .endSection()
-    .section("filters", "Filters")
-        .listValue("blocks", List.of("minecraft:stone"), ConfigCodecs.STRING)
-        .endSection()
-    .build();
+@RcuiConfig(id = "totemdoll", wrapperName = "TotemDollConfig")
+public final class TotemDollConfigModel {
+    @Setting(section = "general", title = "Enable Totem Doll")
+    public boolean enabled = true;
 
-try (var store = YamlConfigStore.open(spec, configDirectory.resolve("totemdoll.yaml"))) {
-    store.load();
-    @SuppressWarnings("unchecked")
-    ConfigEntry<Boolean> enabledEntry =
-        (ConfigEntry<Boolean>) spec.entry("general.enabled");
-    var enabled = UiBinding.of(enabledEntry::get, enabledEntry::set);
-    // Build the UI from enabled, then call store.flush() on Done.
+    @Setting(section = "general", min = 25, max = 200, step = 25)
+    public int scale = 100;
+
+    @Setting(section = "appearance", title = "Style", codec = StyleIdCodec.class)
+    public StyleId style = new StyleId("classic");
+}
+
+try (var config = TotemDollConfig.createAndLoad(configDirectory)) {
+    var enabled = config.enabledBinding();
+    var scale = config.scaleBinding();
+    // Build the UI from these bindings. Done may call config.flush().
 }
 ```
 
-Values are validated before write-back. Changes are coalesced off the render
-thread, `flush()` and `close()` wait for pending writes, and saves use a
-temporary file followed by an atomic replacement when the filesystem supports
-it. Broken YAML and failed migrations are backed up before defaults are used;
-unknown sections and fields remain in the file.
+The generated wrapper loads `config/totemdoll.yaml` relative to the directory
+passed by the host. Values are validated before write-back. Changes are
+coalesced off the render thread, `flush()` and `close()` wait for pending
+writes, and saves use a temporary file followed by an atomic replacement when
+the filesystem supports it. Broken YAML and failed migrations are backed up
+before defaults are used; unknown sections and fields remain in the file.
 
 ### Core source layout
 

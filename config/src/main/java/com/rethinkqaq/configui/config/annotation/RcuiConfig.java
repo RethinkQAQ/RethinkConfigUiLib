@@ -17,14 +17,21 @@
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.rethinkqaq.configui.config;
+package com.rethinkqaq.configui.config.annotation;
 
-import java.io.IOException;
+import com.rethinkqaq.configui.config.ConfigMigration;
 
-public interface ConfigStore extends AutoCloseable {
-    ConfigSession load() throws IOException;
-    void save() throws IOException;
-    void flush() throws IOException;
-    boolean isDirty();
-    @Override void close() throws IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.TYPE)
+public @interface RcuiConfig {
+    String id();
+    String file() default "";
+    String wrapperName() default "";
+    int schemaVersion() default 0;
+    Class<? extends ConfigMigration>[] migrations() default {};
 }
