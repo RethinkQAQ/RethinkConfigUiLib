@@ -1,5 +1,7 @@
 import java.util.Properties
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.bundling.Jar
 
 private fun String.xmlEscape() = buildString {
@@ -218,6 +220,43 @@ gradle.projectsLoaded {
         group = "build"
         description = "Builds one experimental universal JAR for each supported Minecraft version."
         dependsOn(universalJarTasks)
+    }
+    rootProject.pluginManager.apply("maven-publish")
+    rootProject.extensions.configure<PublishingExtension> {
+        publications {
+            supportedVersions.forEach { minecraftVersion ->
+                val publicationName = "universalMc" + minecraftVersion.replace('.', '_')
+                create<MavenPublication>(publicationName) {
+                    groupId = "com.github.RethinkQAQ.RethinkConfigUiLib"
+                    artifactId = "$artifactBase-mc$minecraftVersion"
+                    version = providers.gradleProperty("jitpack.version")
+                        .orElse(providers.gradleProperty("mod.version"))
+                        .get()
+
+                    val universalJar = rootProject.layout.buildDirectory.file(
+                        "libs/$artifactBase-$buildVersion-mc$minecraftVersion.jar"
+                    )
+                    artifact(universalJar) {
+                        builtBy(rootProject.tasks.named("universalJar${minecraftVersion.replace('.', '_')}"))
+                    }
+
+                    pom {
+                        name = "Rethink Config UI Lib for Minecraft $minecraftVersion"
+                        description = providers.gradleProperty("mod.description").orNull
+                        url = "https://github.com/RethinkQAQ/RethinkConfigUiLib"
+                        licenses {
+                            license {
+                                name = "GNU Lesser General Public License v3.0 only"
+                                url = "https://www.gnu.org/licenses/lgpl-3.0.html"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    rootProject.tasks.named("publishToMavenLocal") {
+        dependsOn("assembleUniversalJars")
     }
     rootProject.tasks.register("licenseFormat") {
         group = "formatting"

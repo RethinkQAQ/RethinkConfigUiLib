@@ -3,4 +3,4 @@ jdk:
 before_install:
   - chmod +x gradlew
 install:
-  - ./gradlew clean build publishToMavenLocal -Pmod.version=${VERSION} --no-daemon --stacktrace
+  - ./gradlew clean build assembleUniversalJars publishToMavenLocal -Pmod.version="${VERSION#v}" -Pjitpack.version="${VERSION}" --no-daemon --stacktrace

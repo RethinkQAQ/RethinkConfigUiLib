@@ -157,6 +157,43 @@ Use the artifact for the host's exact Minecraft version and pin every host to
 the same RCUI version. The library is client-only and has empty loader
 bootstraps: it registers no content, events, Mixins, or Screen replacements.
 
+## JitPack dependency
+
+Each release also publishes one universal Maven artifact per Minecraft version
+through JitPack. Add JitPack after the normal repositories and use the release
+tag as the dependency version:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven("https://jitpack.io")
+}
+
+val rcui =
+    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-mc1.21.1:v0.1.1"
+```
+
+The artifact ID must match the host's Minecraft version, for example
+`rethink-config-ui-lib-mc1.21.1` or `rethink-config-ui-lib-mc26.2`.
+Use `compileOnly(rcui)` in a shared/common source set and embed the same
+dependency from the loader source set:
+
+```kotlin
+// Fabric
+dependencies {
+    modImplementation(rcui)
+    include(modImplementation(rcui))
+}
+
+// Forge or NeoForge
+dependencies {
+    jarJar(implementation(rcui))
+}
+```
+
+All host mods should use the same RCUI tag and the artifact matching their
+Minecraft version.
+
 ## Built-in demo
 
 The platform JAR contains a visual smoke-test screen for development. Gradle
