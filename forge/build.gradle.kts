@@ -7,8 +7,14 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.withGroovyBuilder
 
 buildscript {
-    repositories { maven("https://maven.minecraftforge.net/") }
-    dependencies { classpath("net.minecraftforge:renamer-gradle:1.1.2") }
+    repositories {
+        mavenCentral()
+        maven("https://maven.minecraftforge.net/")
+    }
+    dependencies {
+        classpath("net.minecraftforge:renamer-gradle:1.1.2")
+        classpath("org.apache.maven:maven-artifact:3.9.9")
+    }
 }
 
 plugins {
