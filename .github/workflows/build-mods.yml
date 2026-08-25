@@ -48,70 +48,28 @@ jobs:
 
       - name: Build all enabled targets
         run: >-
-          ./gradlew build
+          ./gradlew build assembleUniversalJars
           -Pmod.version="$BUILD_VERSION"
           -Pbuild.number="$BUILD_SUFFIX"
           --parallel --build-cache --no-daemon --stacktrace
 
-      - name: Collect jars
+      - name: Collect universal jars
         shell: bash
         run: |
           python3 - <<'PY'
-          import shutil
           from pathlib import Path
 
-          def properties(path):
-              result = {}
-              for line in path.read_text(encoding='utf-8').splitlines():
-                  line = line.strip()
-                  if line and not line.startswith('#') and '=' in line:
-                      key, value = line.split('=', 1)
-                      result[key.strip()] = value.strip()
-              return result
-
-          staging = Path('artifacts')
           combined = Path('combined-artifacts')
-          staging.mkdir(exist_ok=True)
           combined.mkdir(exist_ok=True)
-          registered = set()
-          for line in Path('gradle.properties').read_text(encoding='utf-8').splitlines():
-              if line.startswith('stonecutter_enabled_versions='):
-                  registered = {v.strip() for v in line.split('=', 1)[1].split(',') if v.strip()}
-                  break
-
-          for config_file in sorted(Path('versions').glob('*/gradle.properties')):
-              if config_file.parent.name not in registered:
-                  continue
-              config = properties(config_file)
-              mc = config['minecraft_version']
-              enabled = [v.strip() for v in config['enable_platforms'].split(',') if v.strip()]
-              for loader in enabled:
-                  jars = []
-                  for jar in sorted((Path(loader) / 'versions' / mc / 'build' / 'libs').glob('*.jar')):
-                      if any(token in jar.name for token in ('-sources.jar', '-javadoc.jar', '-dev.jar', '-slim.jar')):
-                          continue
-                      jars.append(jar)
-                  if not jars:
-                      raise SystemExit(f'No publishable jar for {loader} {mc}')
-                  group = f'{loader}-{mc}'
-                  target = staging / group
-                  target.mkdir(parents=True, exist_ok=True)
-                  for jar in jars:
-                      # ForgeGradle's legacy remapping chain names its final
-                      # production jar `-slim-all.jar`.  `slim-all` is an
-                      # internal classifier, not a user-facing variant; keep
-                      # that final remapped content but publish the canonical
-                      # mod filename without the classifier.
-                      published_name = jar.name
-                      if published_name.endswith('-slim-all.jar'):
-                          published_name = published_name[:-len('-slim-all.jar')] + '.jar'
-                      shutil.copy2(jar, target / published_name)
-                      flattened = combined / published_name
-                      if flattened.exists():
-                          raise SystemExit(f'Duplicate flattened jar: {jar.name}')
-                      shutil.copy2(jar, flattened)
-          if not any(combined.iterdir()):
-              raise SystemExit('No mod jars were collected')
+          jars = sorted(Path('build/libs').glob('rethink-config-ui-lib-*-mc*.jar'))
+          if not jars:
+              raise SystemExit('No universal jars were generated')
+          for jar in jars:
+              if any(jar.name.endswith(f'-{loader}.jar') for loader in ('fabric', 'forge', 'neoforge')):
+                  raise SystemExit(f'Platform jar found in universal output: {jar.name}')
+              if any(token in jar.name for token in ('-sources.jar', '-javadoc.jar', '-dev.jar', '-slim.jar')):
+                  raise SystemExit(f'Non-release jar found in universal output: {jar.name}')
+              (combined / jar.name).write_bytes(jar.read_bytes())
           PY
 
       - name: Upload commit artifact
@@ -127,7 +85,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version.outputs.artifact_name }}
-          path: |
-            artifacts/
-            combined-artifacts/
+          path: combined-artifacts/*.jar
           if-no-files-found: error

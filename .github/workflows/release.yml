@@ -21,7 +21,7 @@ jobs:
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/combined-artifacts/*.jar
+          files: artifacts/*.jar
 
   # Temporarily disabled: publishing to Modrinth and CurseForge is opt-in.
   # Re-enable this job when the corresponding project IDs and tokens are configured.

@@ -1,4 +1,6 @@
 import java.util.Properties
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.bundling.Jar
 
 private fun String.xmlEscape() = buildString {
     this@xmlEscape.forEach { character ->
@@ -181,6 +183,41 @@ gradle.projectsLoaded {
                 }
             }
         }
+    }
+    val artifactBase = providers.gradleProperty("rcui.artifact_base")
+        .orElse(providers.gradleProperty("mod.id").map { it.replace('_', '-') })
+        .get()
+    val buildVersion = listOfNotNull(
+        providers.gradleProperty("mod.version").get(),
+        providers.gradleProperty("build.number").orNull?.trim()?.takeIf(String::isNotEmpty)
+    ).joinToString("-")
+    val universalJarTasks = platformVersions.values.flatten().distinct().map { minecraftVersion ->
+        val platforms = listOf("fabric", "forge", "neoforge")
+            .filter { platform -> platformVersions[platform]?.contains(minecraftVersion) == true }
+        val taskName = "universalJar${minecraftVersion.replace('.', '_')}"
+        rootProject.tasks.register(taskName, Jar::class.java) {
+            group = "build"
+            description = "Builds one experimental universal RCUI JAR for Minecraft $minecraftVersion."
+            dependsOn(platforms.map { platform -> ":$platform:$minecraftVersion:build" })
+            destinationDirectory.set(rootProject.layout.buildDirectory.dir("libs"))
+            archiveFileName.set("$artifactBase-$buildVersion-mc$minecraftVersion.jar")
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+            platforms.forEach { platform ->
+                val candidate = rootProject.project(":$platform:$minecraftVersion")
+                val sourceName = if (platform == "forge" && minecraftVersion in setOf("1.20.1", "1.20.4")) {
+                    "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-slim-all.jar"
+                } else {
+                    "$artifactBase-$buildVersion-mc$minecraftVersion-$platform.jar"
+                }
+                from(rootProject.zipTree(candidate.layout.buildDirectory.file("libs/$sourceName")))
+            }
+        }
+    }
+    rootProject.tasks.register("assembleUniversalJars") {
+        group = "build"
+        description = "Builds one experimental universal JAR for each supported Minecraft version."
+        dependsOn(universalJarTasks)
     }
     rootProject.tasks.register("licenseFormat") {
         group = "formatting"
