@@ -3,4 +3,5 @@ jdk:
 before_install:
   - chmod +x gradlew
 install:
-  - ./gradlew clean build assembleUniversalJars publishToMavenLocal -Pmod.version="${VERSION#v}" -Pjitpack.version="${VERSION}" --no-daemon --stacktrace
+  - chmod +x scripts/jitpack-install.sh
+  - ./scripts/jitpack-install.sh

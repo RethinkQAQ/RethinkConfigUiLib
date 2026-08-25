@@ -170,7 +170,7 @@ repositories {
 }
 
 val rcui =
-    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-mc1.21.1:v0.1.1"
+    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-mc1.21.1:v0.1.2"
 ```
 
 The artifact ID must match the host's Minecraft version, for example
