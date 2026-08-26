@@ -163,7 +163,7 @@ repositories {
 val resourcePackFormat = commonMod.propOrNull("resource_pack_format") ?: "15"
 val usesMinorResourcePackFormat = commonMod.mc.let { version ->
     val parts = version.split('.').map(String::toInt)
-    parts[0] >= 26 || (parts[0] == 1 && parts[1] == 21 && parts[2] >= 11)
+    parts[0] >= 26 || (parts[0] == 1 && parts[1] == 21 && parts[2] >= 9)
 }
 val resourcePackMetadata = if (usesMinorResourcePackFormat) {
     "\"min_format\": [$resourcePackFormat, 0],\n        \"max_format\": [$resourcePackFormat, 0]"

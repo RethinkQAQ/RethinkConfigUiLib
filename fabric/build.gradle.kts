@@ -8,6 +8,10 @@ plugins {
 }
 
 dependencies {
+    compileOnly("org.spongepowered:mixin:0.8.5")
+    if (!commonMod.unobfuscated) {
+        annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
+    }
     implementation(project(":core"))
     val configDependency = project.dependencies.project(mapOf("path" to ":config"))
     implementation(configDependency)
@@ -30,6 +34,30 @@ dependencies {
 
     if (!providers.gradleProperty("skipOptionalDependencies").isPresent) {
         commonMod.depOrNull("modmenu")?.let { modLocalRuntime("com.terraformersmc:modmenu:$it") }
+    }
+}
+
+if (!commonMod.unobfuscated) {
+    loom {
+        mixin {
+            useLegacyMixinAp.set(true)
+            defaultRefmapName.set("${commonMod.id}.refmap.json")
+        }
+    }
+} else {
+    val generatedRefmap = layout.buildDirectory.file("generated/resources/mixin/${commonMod.id}.refmap.json")
+    val generateMixinRefmap = tasks.register("generateMixinRefmap") {
+        outputs.file(generatedRefmap)
+        doLast {
+            generatedRefmap.get().asFile.apply {
+                parentFile.mkdirs()
+                writeText("{\n  \"mappings\": {},\n  \"data\": {}\n}\n")
+            }
+        }
+    }
+    tasks.processResources {
+        dependsOn(generateMixinRefmap)
+        from(generatedRefmap.map { it.asFile.parentFile })
     }
 }
 
@@ -79,6 +107,7 @@ loom {
                 // launchers, which bypass Gradle's selected Java toolchain.
                 ideConfigGenerated(false)
                 runDir("runs/client")
+                property("rethink_config_ui_lib_example", "true")
             }
         }
         if (providers.gradleProperty("run.server").map { it.toBoolean() }.orElse(true).get()) {

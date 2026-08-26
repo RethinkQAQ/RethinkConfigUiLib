@@ -26,7 +26,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.narration.NarratedElementType;
-//? if >=1.21.11 {
+//? if >=1.21.10 {
 /*import net.minecraft.client.input.MouseButtonEvent;
 *///?}
 //? if >=26.1 {
@@ -64,7 +64,7 @@ public final class FlatDemoButton extends AbstractWidget {
         output.add(NarratedElementType.TITLE, getMessage());
     }
 
-    //? if >=1.21.11 {
+    //? if >=1.21.10 {
     /*@Override public void onClick(MouseButtonEvent event, boolean doubleClick) { action.run(); }
     *///?} else {
     @Override public void onClick(double mouseX, double mouseY) { action.run(); }

@@ -53,6 +53,7 @@ neoForge {
                 client()
                 ideName = "NeoForge Client ${commonMod.mc}"
                 disableIdeRun()
+                jvmArgument("-Drethink_config_ui_lib_example=true")
             }
         }
         if (providers.gradleProperty("run.server").map { it.toBoolean() }.orElse(true).get()) {

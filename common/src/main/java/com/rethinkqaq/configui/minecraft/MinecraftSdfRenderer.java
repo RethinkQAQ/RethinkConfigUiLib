@@ -19,7 +19,7 @@
 package com.rethinkqaq.configui.minecraft;
 
 import com.rethinkqaq.configui.core.UiBounds;
-//? if <1.21.4 {
+//? if <1.21.3 {
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -35,7 +35,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 //?}
-//? if >=1.21.4 && <1.21.8 {
+//? if >=1.21.3 && <1.21.5 {
 /*import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -48,7 +48,7 @@ import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.client.renderer.ShaderProgram;
 import net.minecraft.resources.ResourceLocation;
 *///?}
-//? if >=1.21.8 {
+//? if >=1.21.6 {
 /*import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -57,10 +57,10 @@ import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 *///?}
-//? if >=1.21.8 && <26.2 {
+//? if >=1.21.6 && <26.2 {
 /*import com.mojang.blaze3d.shaders.UniformType;
 *///?}
-//? if >=1.21.8 && <1.21.11 {
+//? if >=1.21.6 && <1.21.11 {
 /*import com.mojang.blaze3d.platform.DepthTestFunction;
 import net.minecraft.resources.ResourceLocation;
 *///?}
@@ -93,12 +93,12 @@ final class MinecraftSdfRenderer {
 
     /** Initializes the demo renderer early, so an opt-in demo reports backend errors at startup. */
     static void prewarm() {
-        //? if <1.21.4 {
+        //? if <1.21.3 {
         shader();
         //?}
     }
 
-    //? if <1.21.4 {
+    //? if <1.21.3 {
     private static final String SDF_JSON = """
         {"blend":{"func":"add","srcrgb":"srcalpha","dstrgb":"1-srcalpha"},"vertex":"rethink_config_ui_lib/rcui_sdf","fragment":"rethink_config_ui_lib/rcui_sdf","samplers":[],"uniforms":[
         {"name":"ModelViewMat","type":"matrix4x4","count":16,"values":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
@@ -160,7 +160,7 @@ final class MinecraftSdfRenderer {
     }
     //?}
 
-    //? if <1.21.4 {
+    //? if <1.21.3 {
     private static ResourceProvider resources() {
         return MinecraftSdfRenderer::resourceFromEmbeddedSource;
     }
@@ -184,7 +184,7 @@ final class MinecraftSdfRenderer {
     }
     //?}
 
-    //? if >=1.21.4 && <1.21.8 {
+    //? if >=1.21.3 && <1.21.5 {
     /*private static final ShaderProgram PROGRAM = new ShaderProgram(ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf"), DefaultVertexFormat.POSITION_COLOR, ShaderDefines.EMPTY);
     private static boolean warned;
     static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
@@ -211,7 +211,7 @@ final class MinecraftSdfRenderer {
     }
     *///?}
 
-    //? if >=1.21.1 && <1.21.4 {
+    //? if >=1.21.1 && <1.21.3 {
     private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         ShaderInstance active = shader(); if (active == null || box.width() <= 0 || box.height() <= 0) return false;
         try {
@@ -227,7 +227,7 @@ final class MinecraftSdfRenderer {
     }
     //?}
 
-    //? if >=1.21.4 && <1.21.8 {
+    //? if >=1.21.3 && <1.21.5 {
     /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
         if (box.width() <= 0 || box.height() <= 0) return true;
         try {
@@ -244,7 +244,13 @@ final class MinecraftSdfRenderer {
     }
     *///?}
 
-    //? if >=1.21.8 {
+    //? if >=1.21.5 && <1.21.6 {
+    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return false; }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return false; }
+    static void invalidate() { }
+    *///?}
+
+    //? if >=1.21.6 {
     /*private static final Map<PipelineKey, RenderPipeline> PIPELINES = new HashMap<>();
     private static boolean warned;
     private static boolean unavailable;
@@ -259,7 +265,7 @@ final class MinecraftSdfRenderer {
     }
     *///?}
 
-    //? if >=1.21.8 && <1.21.11 {
+    //? if >=1.21.6 && <1.21.11 {
     /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
     static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
     private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {

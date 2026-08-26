@@ -12,6 +12,12 @@
   },
   "license": "${modLicense}",
   "environment": "client",
+  "custom": {
+    "modmenu": {
+      "badges": ["library"],
+      "update_checker": false
+    }
+  },
   "entrypoints": { "client": ["com.rethinkqaq.configui.fabric.RethinkConfigUiLibFabric"] },
   "mixins": ["rethink_config_ui_lib.fabric.mixins.json"],
   "depends": {

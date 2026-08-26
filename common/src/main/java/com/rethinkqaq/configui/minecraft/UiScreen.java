@@ -29,7 +29,7 @@ import net.minecraft.client.gui.GuiGraphics;
 //?}
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-//? if >=1.21.11 {
+//? if >=1.21.10 {
 /*import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 *///?}
@@ -71,7 +71,7 @@ public class UiScreen extends Screen {
     @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
     //?}
 
-    //? if >=1.21.11 {
+    //? if >=1.21.10 {
     /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x(), event.y(), event.button()); }
     @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x(), event.y(), event.button()); }
     @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(event.x(), event.y(), event.button()); }
@@ -85,7 +85,7 @@ public class UiScreen extends Screen {
 
     //? if >=26.1 {
     /*@Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) { return host.charTyped(event.codepoint(), 0) || super.charTyped(event); }
-    *///?} else if >=1.21.11 {
+    *///?} else if >=1.21.10 {
     /*@Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) { return host.charTyped(event.codepoint(), event.modifiers()) || super.charTyped(event); }
     *///?} else {
     @Override public boolean charTyped(char codePoint, int modifiers) { return host.charTyped(codePoint, modifiers) || super.charTyped(codePoint, modifiers); }

@@ -51,9 +51,9 @@ public final class RethinkConfigUiLibClientEvents {
         );
     }
 
-    // Forge 1.21.8+ exposes a typed bus for each screen event. Older nodes
+    // Forge 1.21.6+ exposes a typed bus for each screen event. Older nodes
     // register the same listener on MinecraftForge.EVENT_BUS in the mod entrypoint.
-    //? if >=1.21.8 {
+    //? if >=1.21.6 {
     /*
     public static void register() {
         ScreenEvent.Init.Post.BUS.addListener(RethinkConfigUiLibClientEvents::addDemoButton);

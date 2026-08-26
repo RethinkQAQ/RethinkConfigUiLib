@@ -2,6 +2,8 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.rethinkqaq.configui.fabric.mixin",
+  "plugin": "com.rethinkqaq.configui.fabric.mixin.TitleScreenDemoMixinPlugin",
+  "refmap": "${modId}.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "client": ["TitleScreenMixin"],
   "injectors": { "defaultRequire": 1 }
