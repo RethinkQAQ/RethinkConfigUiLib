@@ -26,7 +26,10 @@ import com.rethinkqaq.configui.core.UiTheme;
 
 /** A horizontal flow container. */
 public class UiRow extends Ui.Container {
+    public enum Alignment { START, CENTER, END, SPACE_BETWEEN }
+
     private float gap = -1;
+    private Alignment alignment = Alignment.START;
 
     public UiRow gap(float value) {
         gap = value;
@@ -35,6 +38,14 @@ public class UiRow extends Ui.Container {
     }
 
     public float gap() { return gap; }
+
+    public UiRow alignment(Alignment value) {
+        alignment = java.util.Objects.requireNonNull(value, "alignment");
+        invalidateLayout();
+        return this;
+    }
+
+    public Alignment alignment() { return alignment; }
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -53,8 +64,19 @@ public class UiRow extends Ui.Container {
     @Override
     public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
-        float x = value.x();
         float actualGap = gap < 0 ? theme.metrics().spacing() : gap;
+        float childrenWidth = 0;
+        for (Ui.Node child : children) childrenWidth += child.measuredWidth();
+        float baseGaps = actualGap * Math.max(0, children.size() - 1);
+        float free = Math.max(0, value.width() - childrenWidth - baseGaps);
+        float x = switch (alignment) {
+            case START, SPACE_BETWEEN -> value.x();
+            case CENTER -> value.x() + free / 2f;
+            case END -> value.x() + free;
+        };
+        if (alignment == Alignment.SPACE_BETWEEN && children.size() > 1) {
+            actualGap += free / (children.size() - 1);
+        }
         for (Ui.Node child : children) {
             child.layout(renderer, new UiBounds(x, value.y(), child.measuredWidth(), value.height()), theme);
             x += child.measuredWidth() + actualGap;

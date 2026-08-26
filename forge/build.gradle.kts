@@ -88,6 +88,9 @@ repositories {
 val jarJarContainer = jarJar.register {
     archiveClassifier = if (legacyObfuscation) "slim" else null
 }
+val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
+
 dependencies {
     implementation(project(":core"))
     val configDependency = project.dependencies.project(mapOf("path" to ":config"))
@@ -95,12 +98,18 @@ dependencies {
     // the project dependency off Forge's runtime module path to avoid a JPMS
     // split package between the standalone config module and main.
     compileOnly(configDependency)
-    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
-    implementation(snakeYaml)
-    add(jarJarContainer.configurationName, snakeYaml)
+    compileOnly(snakeYaml)
+    runtimeOnly(files({ snakeYamlBundle.files }))
     implementation(minecraft.dependency("net.minecraftforge:forge:${commonMod.mc}-${commonMod.dep("forge")}"))
 }
 val jarJarTask = tasks.named<JarJar>("jarJar")
+
+jarJarTask.configure {
+    from({ snakeYamlBundle.files.map { zipTree(it) } }) {
+        exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+    }
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+}
 
 if (legacyObfuscation) {
     val renamerExtension = extensions.getByType<RenamerExtension>()

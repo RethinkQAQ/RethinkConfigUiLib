@@ -1,11 +1,16 @@
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.jvm.tasks.Jar
+import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
     id("multiloader-loader")
     id("fabric-loom-compat")
 }
+
+val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
 
 dependencies {
     compileOnly("org.spongepowered:mixin:0.8.5")
@@ -14,10 +19,11 @@ dependencies {
     }
     implementation(project(":core"))
     val configDependency = project.dependencies.project(mapOf("path" to ":config"))
-    implementation(configDependency)
-    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
-    implementation(snakeYaml)
-    include(snakeYaml)
+    implementation(configDependency) {
+        (this as ModuleDependency).exclude(mapOf("group" to "org.snakeyaml", "module" to "snakeyaml-engine"))
+    }
+    compileOnly(snakeYaml)
+    runtimeOnly(files({ snakeYamlBundle.files }))
     minecraft("com.mojang:minecraft:${commonMod.mc}")
     if (!commonMod.unobfuscated) {
         mappings(loom.layered {
@@ -35,6 +41,19 @@ dependencies {
     if (!providers.gradleProperty("skipOptionalDependencies").isPresent) {
         commonMod.depOrNull("modmenu")?.let { modLocalRuntime("com.terraformersmc:modmenu:$it") }
     }
+}
+
+tasks.named<Jar>("jar") {
+    from({ snakeYamlBundle.files.map { zipTree(it) } }) {
+        exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+tasks.withType<RemapJarTask>().configureEach {
+    from({ snakeYamlBundle.files.map { zipTree(it) } }) {
+        exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 if (!commonMod.unobfuscated) {

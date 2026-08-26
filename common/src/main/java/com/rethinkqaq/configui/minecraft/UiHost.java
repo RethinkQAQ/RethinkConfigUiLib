@@ -27,6 +27,7 @@ import com.rethinkqaq.configui.core.UiKeyEvent;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTextInput;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.layout.UiTemplate;
 import com.rethinkqaq.configui.core.component.UiTooltip;
 import com.rethinkqaq.configui.core.component.UiTooltipContent;
 import com.rethinkqaq.configui.core.component.feedback.UiNotificationCenter;
@@ -59,9 +60,22 @@ public final class UiHost {
     }
 
     public UiHost(Ui.Node root, UiTheme theme, LayoutMode layoutMode) {
+        this(root, theme, layoutMode, null);
+    }
+
+    public UiHost(UiTemplate template, UiTheme theme, LayoutMode layoutMode) {
+        this(template, theme, layoutMode, template.background());
+    }
+
+    public UiHost(UiTemplate template, UiTheme theme) {
+        this(template, theme, LayoutMode.CONTENT);
+    }
+
+    private UiHost(Ui.Node root, UiTheme theme, LayoutMode layoutMode, UiBackground initialBackground) {
         this.root = Objects.requireNonNull(root, "root");
         this.theme = Objects.requireNonNull(theme, "theme");
         this.layoutMode = Objects.requireNonNull(layoutMode, "layoutMode");
+        this.background = initialBackground;
     }
 
     public UiTheme theme() { return theme; }

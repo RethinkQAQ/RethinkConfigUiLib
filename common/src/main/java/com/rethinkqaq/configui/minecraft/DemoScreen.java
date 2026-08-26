@@ -23,11 +23,11 @@ import com.rethinkqaq.configui.core.UiBadge;
 import com.rethinkqaq.configui.core.UiBinding;
 import com.rethinkqaq.configui.core.UiDialogHost;
 import com.rethinkqaq.configui.core.UiPageHost;
-import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.layout.UiHeader;
 import com.rethinkqaq.configui.core.layout.UiHeaderStyle;
+import com.rethinkqaq.configui.core.layout.UiTemplate;
 import com.rethinkqaq.configui.core.component.data.UiListEntryAdapter;
 import com.rethinkqaq.configui.core.component.feedback.UiFeedbackType;
 import com.rethinkqaq.configui.core.component.feedback.UiToast;
@@ -69,11 +69,14 @@ public final class DemoScreen extends UiScreen {
             .addPage(UiText.literal("Preview"), previewPage())
             .addPage(UiText.literal("Advanced"), advancedPage());
 
-        return dialogs.root(Ui.scaffold(pages)
+        UiTemplate template = Ui.topNavigationTemplate()
             .header(header)
             .navigation(pages.navigation())
-            .navigationMode(UiScaffold.NavigationMode.TOP)
-            .maxContentWidth(1080));
+            .content(pages)
+            .maxContentWidth(1080)
+            .regionGap(12)
+            .build();
+        return dialogs.root(template);
     }
 
     private static Ui.Node generalPage(AtomicBoolean enabled, AtomicReference<Double> scale,

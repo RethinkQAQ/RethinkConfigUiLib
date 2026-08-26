@@ -50,6 +50,7 @@ import com.rethinkqaq.configui.core.layout.UiRow;
 import com.rethinkqaq.configui.core.layout.UiScrollView;
 import com.rethinkqaq.configui.core.layout.UiSection;
 import com.rethinkqaq.configui.core.layout.UiStack;
+import com.rethinkqaq.configui.core.layout.UiTemplate;
 import com.rethinkqaq.configui.core.setting.UiNumberSpec;
 import com.rethinkqaq.configui.core.setting.UiListSetting;
 import com.rethinkqaq.configui.core.setting.UiSetting;
@@ -70,6 +71,8 @@ public final class Ui {
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
     public static UiScaffold scaffold(Node content) { return new UiScaffold(content); }
+    public static UiTemplate.Builder template() { return UiTemplate.template(); }
+    public static UiTemplate.Builder topNavigationTemplate() { return UiTemplate.topNavigation(); }
     public static UiHeader header(UiText title) { return UiHeader.card(title); }
     public static UiHeader textHeader(UiText title) { return UiHeader.text(title); }
     public static UiDialogHost dialogHost() { return new UiDialogHost(); }
@@ -301,6 +304,7 @@ public final class Ui {
     }
     public static class Row extends UiRow {
         @Override public Row gap(float value) { super.gap(value); return this; }
+        @Override public Row alignment(Alignment value) { super.alignment(value); return this; }
         @Override public Row add(Node child) { super.add(child); return this; }
     }
     public static class Stack extends UiStack {

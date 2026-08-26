@@ -51,9 +51,6 @@ public final class ConfigSpec {
             if (migration.toVersion() != migration.fromVersion() + 1) throw new IllegalArgumentException("Migrations must advance exactly one schema version");
             if (this.migrations.putIfAbsent(migration.fromVersion(), migration) != null) throw new IllegalArgumentException("Duplicate migration from version " + migration.fromVersion());
         }
-        for (int version = 0; version < schemaVersion; version++) {
-            if (!this.migrations.containsKey(version)) throw new IllegalArgumentException("Missing migration from version " + version);
-        }
     }
 
     public static ConfigSpec generated(String id, int schemaVersion, List<Section> sections,

@@ -1,4 +1,5 @@
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.jvm.tasks.Jar
 
 plugins {
@@ -6,12 +7,16 @@ plugins {
     id("net.neoforged.moddev") version "2.0.143"
 }
 
+val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
+
 dependencies {
     implementation(project(":core"))
-    implementation(project(":config"))
-    val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
-    implementation(snakeYaml)
-    add("jarJar", snakeYaml)
+    implementation(project(":config")) {
+        (this as ModuleDependency).exclude(mapOf("group" to "org.snakeyaml", "module" to "snakeyaml-engine"))
+    }
+    compileOnly(snakeYaml)
+    runtimeOnly(files({ snakeYamlBundle.files }))
 }
 
 // ModDev loads the registered source set directly during development rather than
@@ -28,6 +33,13 @@ tasks.named("classes") {
 tasks.named<Jar>("sourcesJar") {
     from(project(":core").file("src/main/java"))
     from(project(":config").file("src/main/java"))
+}
+
+tasks.named<Jar>("jar") {
+    from({ snakeYamlBundle.files.map { zipTree(it) } }) {
+        exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+    }
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 
 afterEvaluate {
