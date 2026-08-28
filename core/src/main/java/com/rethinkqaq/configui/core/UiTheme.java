@@ -44,6 +44,28 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
     /** Default light theme inspired by the project visual direction. */
     public static UiTheme roseLight() { return builder().build(); }
 
+    /** Dark companion theme using the same rose accent and semantic tokens. */
+    public static UiTheme roseDark() {
+        UiPalette palette = UiPalette.builder()
+            .background(0xFF171619)
+            .surfaceRaised(0xFF242225)
+            .control(0xFF353335)
+            .controlHover(0xFF4A4749)
+            .controlPressed(0xFF575257)
+            .controlDisabled(0xFF353335)
+            .accent(0xFFF39ABA)
+            .accentHover(0xFFFFB2CB)
+            .accentPressed(0xFFE184A6)
+            .onAccent(0xFF241F22)
+            .textPrimary(0xFFF4F1F3)
+            .textSecondary(0xFFBDB8BE)
+            .textDisabled(0xFF777178)
+            .border(0xFF4A454B)
+            .focusRing(0xFFF39ABA)
+            .build();
+        return builder().palette(palette).build();
+    }
+
     public static final class Builder {
         private UiPalette palette = UiPalette.roseLight();
         private UiMetrics metrics = UiMetrics.comfortable();

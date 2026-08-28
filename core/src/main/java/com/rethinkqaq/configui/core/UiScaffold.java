@@ -19,13 +19,16 @@
 
 package com.rethinkqaq.configui.core;
 
+import com.rethinkqaq.configui.core.layout.UiHeader;
+import com.rethinkqaq.configui.core.layout.UiHeaderStyle;
+
 import java.util.Objects;
 
 /**
  * A page frame with optional header, sidebar and footer. Content is the only required region;
  * absent regions reserve no space.
  */
-public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
+public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider {
     private static final float HEADER_HIDE_WIDTH = 360;
     private static final float COMPACT_WIDTH = 760;
     /** Selects which navigation region is active for this frame. */
@@ -45,6 +48,9 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
     private float headerHeight, navigationHeight, sidebarHeight, footerHeight;
 
     UiScaffold(Ui.Node content) { this.content = Objects.requireNonNull(content, "content"); }
+
+    @Override
+    public UiBounds viewportBounds() { return bounds(); }
     public UiScaffold header(Ui.Node value) { header = Objects.requireNonNull(value, "header"); invalidateLayout(); return this; }
     /** Sets the category/navigation node used by {@link NavigationMode#TOP}. */
     public UiScaffold navigation(Ui.Node value) { navigation = Objects.requireNonNull(value, "navigation"); invalidateLayout(); return this; }
@@ -72,7 +78,10 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         return this;
     }
     public Ui.Node content() { return content; }
+    public Ui.Node header() { return header; }
     public Ui.Node navigation() { return navigation; }
+    public Ui.Node sidebar() { return sidebar; }
+    public Ui.Node footer() { return footer; }
     public NavigationMode navigationMode() { return navigationMode; }
     /** Returns whether the optional header is present at the current logical width. */
     public boolean headerVisible() { return headerVisible; }
@@ -94,20 +103,24 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         float shellWidth = shellWidth(maxWidth);
         compact = shellWidth < COMPACT_WIDTH;
         float gap = gap(theme);
-        boolean headerInRange = header != null && shellWidth >= HEADER_HIDE_WIDTH;
+        // Compact text headers are intentionally retained at narrow logical widths.  They are
+        // the primary title treatment for UiTemplate and have no card surface to consume space.
+        boolean headerInRange = header != null && (shellWidth >= HEADER_HIDE_WIDTH
+            || (header instanceof UiHeader uiHeader && uiHeader.style() == UiHeaderStyle.TEXT));
         headerHeight = headerInRange ? measureHeight(header, renderer, shellWidth, maxHeight, theme) : 0;
         headerVisible = headerInRange && headerHeight > 0;
+        float effectiveHeaderHeight = headerVisible ? headerHeight : 0;
         footerHeight = measureHeight(footer, renderer, shellWidth, maxHeight, theme);
         navigationHeight = navigationMode == NavigationMode.TOP
             ? measureHeight(navigation, renderer, shellWidth, maxHeight, theme) : 0;
         float verticalGaps = (!headerVisible ? 0 : gap)
-            + (navigationMode == NavigationMode.TOP && navigation != null ? gap : 0)
+            + (navigationMode == NavigationMode.TOP && navigation != null ? navigationHeight + gap : 0)
             + (footer == null ? 0 : gap);
-        float bodyHeight = Math.max(0, maxHeight - headerHeight - footerHeight - verticalGaps);
+        float bodyHeight = Math.max(0, maxHeight - effectiveHeaderHeight - footerHeight - verticalGaps);
 
         if (navigationMode == NavigationMode.TOP) {
             sidebarHeight = 0;
-            content.measure(renderer, shellWidth, Math.max(0, bodyHeight - navigationHeight), theme);
+            content.measure(renderer, shellWidth, bodyHeight, theme);
         } else if (sidebar == null) {
             content.measure(renderer, shellWidth, bodyHeight, theme);
             sidebarHeight = 0;
@@ -140,7 +153,8 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
             navigation.layout(renderer, new UiBounds(x, y, shellWidth, navigationHeight), theme);
             y += navigationHeight + gap;
         }
-        float bodyHeight = Math.max(0, value.height() - headerHeight - footerHeight
+        float effectiveHeaderHeight = headerVisible ? headerHeight : 0;
+        float bodyHeight = Math.max(0, value.height() - effectiveHeaderHeight - footerHeight
             - (!headerVisible ? 0 : gap)
             - (navigationMode == NavigationMode.TOP && navigation != null ? navigationHeight + gap : 0)
             - (footer == null ? 0 : gap));
@@ -167,24 +181,73 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider {
         } else if (sidebar != null) {
             sidebar.render(renderer, theme);
         }
-        content.render(renderer, theme);
+        // The content region is a fixed viewport in addition to any scroll viewport owned by
+        // the content itself. Platform preview nodes must not draw into header or footer bands.
+        renderer.pushClip(content.bounds());
+        try {
+            content.render(renderer, theme);
+        } finally {
+            renderer.popClip();
+        }
+        // Footer is fixed chrome and remains in the normal synchronous render order.
         if (footer != null) footer.render(renderer, theme);
     }
 
     @Override public boolean click(float x, float y, int button) {
-        return (footer != null && footer.click(x, y, button)) || content.click(x, y, button)
-            || (navigationMode == NavigationMode.TOP && navigation != null && navigation.click(x, y, button))
-            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.click(x, y, button))
-            || (headerVisible && header.click(x, y, button));
+        if (footer != null && footer.bounds().contains(x, y) && footer.click(x, y, button)) return true;
+        if (navigationMode == NavigationMode.TOP && navigation != null
+            && navigation.bounds().contains(x, y) && navigation.click(x, y, button)) return true;
+        if (navigationMode == NavigationMode.SIDEBAR && sidebar != null
+            && sidebar.bounds().contains(x, y) && sidebar.click(x, y, button)) return true;
+        if (headerVisible && header.bounds().contains(x, y) && header.click(x, y, button)) return true;
+        return content.bounds().contains(x, y) && content.click(x, y, button);
     }
     @Override public boolean scroll(float x, float y, double amount) {
-        return content.scroll(x, y, amount)
-            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.scroll(x, y, amount));
+        // Route wheel input only to the region under the pointer.  Without this guard a
+        // scrollable content node could consume wheel events while the pointer was over the
+        // header/navigation, making fixed regions unexpectedly move.
+        if (footer != null && footer.bounds().contains(x, y) && footer.scroll(x, y, amount)) return true;
+        if (navigationMode == NavigationMode.TOP && navigation != null
+            && navigation.bounds().contains(x, y) && navigation.scroll(x, y, amount)) return true;
+        if (navigationMode == NavigationMode.SIDEBAR && sidebar != null
+            && sidebar.bounds().contains(x, y) && sidebar.scroll(x, y, amount)) return true;
+        return content.bounds().contains(x, y) && content.scroll(x, y, amount);
+    }
+    @Override public boolean drag(float x, float y, int button) {
+        if (footer != null && footer.bounds().contains(x, y) && footer.drag(x, y, button)) return true;
+        if (navigationMode == NavigationMode.TOP && navigation != null
+            && navigation.bounds().contains(x, y) && navigation.drag(x, y, button)) return true;
+        if (navigationMode == NavigationMode.SIDEBAR && sidebar != null
+            && sidebar.bounds().contains(x, y) && sidebar.drag(x, y, button)) return true;
+        if (headerVisible && header.bounds().contains(x, y) && header.drag(x, y, button)) return true;
+        return content.bounds().contains(x, y) && content.drag(x, y, button);
+    }
+    @Override public boolean release(float x, float y, int button) {
+        if (footer != null && footer.bounds().contains(x, y) && footer.release(x, y, button)) return true;
+        if (navigationMode == NavigationMode.TOP && navigation != null
+            && navigation.bounds().contains(x, y) && navigation.release(x, y, button)) return true;
+        if (navigationMode == NavigationMode.SIDEBAR && sidebar != null
+            && sidebar.bounds().contains(x, y) && sidebar.release(x, y, button)) return true;
+        if (headerVisible && header.bounds().contains(x, y) && header.release(x, y, button)) return true;
+        return content.bounds().contains(x, y) && content.release(x, y, button);
     }
     @Override public boolean key(int keyCode) {
-        return content.key(keyCode)
+        return (footer != null && footer.key(keyCode))
             || (navigationMode == NavigationMode.TOP && navigation != null && navigation.key(keyCode))
-            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.key(keyCode));
+            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.key(keyCode))
+            || content.key(keyCode);
+    }
+    @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) {
+        return (footer != null && footer.key(event, clipboard))
+            || (navigationMode == NavigationMode.TOP && navigation != null && navigation.key(event, clipboard))
+            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.key(event, clipboard))
+            || content.key(event, clipboard);
+    }
+    @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) {
+        return (footer != null && footer.textInput(event, clipboard))
+            || (navigationMode == NavigationMode.TOP && navigation != null && navigation.textInput(event, clipboard))
+            || (navigationMode == NavigationMode.SIDEBAR && sidebar != null && sidebar.textInput(event, clipboard))
+            || content.textInput(event, clipboard);
     }
 
     private static float measureHeight(Ui.Node node, UiRenderer renderer, float width, float height, UiTheme theme) {

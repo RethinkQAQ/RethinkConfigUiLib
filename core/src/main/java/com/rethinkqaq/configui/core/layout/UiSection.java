@@ -29,6 +29,7 @@ import com.rethinkqaq.configui.core.UiTheme;
 /** A panel with a heading rendered above its children. */
 public class UiSection extends UiPanel {
     private final UiText title;
+    private float titleScale = 1.15f;
 
     public UiSection(UiText title) {
         this.title = Objects.requireNonNull(title, "title");
@@ -36,13 +37,20 @@ public class UiSection extends UiPanel {
 
     public UiText title() { return title; }
 
+    public UiSection titleScale(float value) {
+        if (value <= 0) throw new IllegalArgumentException("title scale must be positive");
+        titleScale = value;
+        invalidateLayout();
+        return this;
+    }
+
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        float childMaxHeight = Math.max(0, maxHeight - renderer.lineHeight() - theme.metrics().spacing());
+        float childMaxHeight = Math.max(0, maxHeight - renderer.lineHeight(titleScale) - theme.metrics().spacing());
         super.measureSelf(renderer, maxWidth,
             childMaxHeight, theme);
         measuredHeight = Math.min(Math.max(0, maxHeight),
-            measuredHeight + renderer.lineHeight() + theme.metrics().spacing());
+            measuredHeight + renderer.lineHeight(titleScale) + theme.metrics().spacing());
     }
 
     @Override
@@ -50,7 +58,7 @@ public class UiSection extends UiPanel {
         super.layout(renderer, value, theme);
         for (Ui.Node child : children) {
             child.layout(renderer, new com.rethinkqaq.configui.core.UiBounds(
-                child.bounds().x(), child.bounds().y() + renderer.lineHeight() + theme.metrics().spacing(),
+                child.bounds().x(), child.bounds().y() + renderer.lineHeight(titleScale) + theme.metrics().spacing(),
                 child.bounds().width(), child.bounds().height()), theme);
         }
     }
@@ -58,8 +66,10 @@ public class UiSection extends UiPanel {
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
         super.render(renderer, theme);
-        Ui.drawFittedText(renderer, title,
-            bounds.x() + theme.metrics().padding(), bounds.y() + theme.metrics().padding(),
-            bounds.width() - theme.metrics().padding() * 2, theme.palette().textPrimary());
+        float width = bounds.width() - theme.metrics().padding() * 2;
+        UiText fitted = Ui.fitText(renderer, title, width / titleScale);
+        float x = bounds.x() + theme.metrics().padding();
+        float y = bounds.y() + theme.metrics().padding();
+        renderer.drawText(fitted, x, y, theme.palette().textPrimary(), titleScale);
     }
 }

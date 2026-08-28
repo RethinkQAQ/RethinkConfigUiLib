@@ -22,17 +22,20 @@ package com.rethinkqaq.configui.core.layout;
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiKey;
+import com.rethinkqaq.configui.core.UiKeyEvent;
+import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTheme;
 
 /** A single-child scrolling viewport. */
-public class UiScrollView extends Ui.Container {
+public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     private float offset;
 
     public UiScrollView(Ui.Node child) { add(child); }
 
     protected Ui.Node child() { return children.get(0); }
     public float offset() { return offset; }
+    @Override public UiBounds viewportBounds() { return bounds; }
     public void reset() { offset = 0; }
 
     @Override
@@ -66,7 +69,33 @@ public class UiScrollView extends Ui.Container {
     }
 
     @Override
+    public boolean click(float x, float y, int button) {
+        return bounds.contains(x, y) && child().click(x, y, button);
+    }
+
+    @Override
+    public boolean drag(float x, float y, int button) {
+        // A normal drag must stay inside the viewport. Pointer-captured controls
+        // are routed directly by UiHost and can continue outside while dragging.
+        return bounds.contains(x, y) && child().drag(x, y, button);
+    }
+
+    @Override
+    public boolean release(float x, float y, int button) {
+        return bounds.contains(x, y) && child().release(x, y, button);
+    }
+
+    @Override
     public boolean key(int keyCode) {
+        return adjustOffset(keyCode) || child().key(keyCode);
+    }
+
+    @Override
+    public boolean key(UiKeyEvent event, UiClipboard clipboard) {
+        return adjustOffset(event.keyCode()) || child().key(event, clipboard);
+    }
+
+    private boolean adjustOffset(int keyCode) {
         float max = Math.max(0, child().measuredHeight() - bounds.height());
         float page = Math.max(1, bounds.height() - 14);
         if (keyCode == UiKey.UP) { offset = Math.max(0, offset - 14); return true; }
@@ -75,6 +104,6 @@ public class UiScrollView extends Ui.Container {
         if (keyCode == UiKey.PAGE_DOWN) { offset = Math.min(max, offset + page); return true; }
         if (keyCode == UiKey.HOME) { offset = 0; return true; }
         if (keyCode == UiKey.END) { offset = max; return true; }
-        return child().key(keyCode);
+        return false;
     }
 }

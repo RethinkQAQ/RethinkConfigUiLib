@@ -19,6 +19,9 @@
 
 package com.rethinkqaq.configui.config;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public final class ConfigValidators {
     private ConfigValidators() { }
 
@@ -31,9 +34,15 @@ public final class ConfigValidators {
             double number = value.doubleValue();
             if (number < minimum || number > maximum) return ConfigValidationResult.error("Value must be between " + minimum + " and " + maximum);
             if (step > 0.0) {
-                double snapped = minimum + Math.rint((number - minimum) / step) * step;
-                double tolerance = Math.max(1.0E-9, Math.abs(step) * 1.0E-9);
-                if (Math.abs(number - snapped) > tolerance) return ConfigValidationResult.error("Value must use a step of " + step);
+                // Numeric settings are commonly floats. Comparing their binary double
+                // expansion to a decimal step rejects valid values such as 0.10 for a
+                // 0.05 step. Use the value's printable decimal representation instead.
+                BigDecimal candidate = new BigDecimal(value.toString());
+                BigDecimal base = BigDecimal.valueOf(minimum);
+                BigDecimal increment = BigDecimal.valueOf(step);
+                BigDecimal steps = candidate.subtract(base).divide(increment, 0, RoundingMode.HALF_UP);
+                BigDecimal snapped = base.add(increment.multiply(steps));
+                if (candidate.compareTo(snapped) != 0) return ConfigValidationResult.error("Value must use a step of " + step);
             }
             return ConfigValidationResult.ok();
         };

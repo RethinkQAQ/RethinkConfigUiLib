@@ -202,7 +202,7 @@ tasks.named("processResources") { dependsOn(stonecutterGenerateTask) }
 
 publishing {
     publications.register<MavenPublication>("mavenJava") {
-        groupId = commonMod.group
+        groupId = commonMod.prop("mod.group")
         artifactId = "$artifactBase-mc${commonMod.mc}-$publishedLoaderName"
         version = commonMod.version
         from(components["java"])

@@ -27,7 +27,7 @@ import java.util.Objects;
  * Root-level overlay owner for dialogs. The active dialog receives all input before the page
  * below it, so dialogs do not need to depend on a particular Screen implementation.
  */
-public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider {
+public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider {
     private Ui.Node root;
     private Ui.Node dialog;
     private UiBounds viewport = UiBounds.EMPTY;
@@ -56,6 +56,11 @@ public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider {
             viewport = value;
             invalidateLayout();
         }
+    }
+
+    @Override
+    public UiBounds viewportBounds() {
+        return viewport.width() > 0 && viewport.height() > 0 ? viewport : bounds;
     }
 
     public void show(Ui.Node value) {
@@ -112,18 +117,26 @@ public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider {
     @Override public boolean click(float x, float y, int button) {
         if (dialog != null) {
             UiBounds area = viewport.width() > 0 && viewport.height() > 0 ? viewport : bounds;
-            return dialog.click(x, y, button) || area.contains(x, y);
+            // The backdrop consumes outside clicks, but dialog controls must only receive
+            // events while the pointer is inside the dialog surface itself.
+            return (dialog.bounds().contains(x, y) && dialog.click(x, y, button)) || area.contains(x, y);
         }
         return root != null && root.click(x, y, button);
     }
     @Override public boolean scroll(float x, float y, double amount) {
-        return dialog != null ? dialog.scroll(x, y, amount) : root != null && root.scroll(x, y, amount);
+        return dialog != null
+            ? dialog.bounds().contains(x, y) && dialog.scroll(x, y, amount)
+            : root != null && root.scroll(x, y, amount);
     }
     @Override public boolean drag(float x, float y, int button) {
-        return dialog != null ? dialog.drag(x, y, button) : root != null && root.drag(x, y, button);
+        return dialog != null
+            ? dialog.bounds().contains(x, y) && dialog.drag(x, y, button)
+            : root != null && root.drag(x, y, button);
     }
     @Override public boolean release(float x, float y, int button) {
-        return dialog != null ? dialog.release(x, y, button) : root != null && root.release(x, y, button);
+        return dialog != null
+            ? dialog.bounds().contains(x, y) && dialog.release(x, y, button)
+            : root != null && root.release(x, y, button);
     }
     @Override public boolean key(int keyCode) {
         if (dialog != null) return (keyCode == UiKey.ESCAPE && close()) || dialog.key(keyCode);

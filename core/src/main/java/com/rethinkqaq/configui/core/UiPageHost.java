@@ -28,14 +28,14 @@ import java.util.Objects;
  * Pages are wrapped in a scroll viewport so switching pages never requires a
  * platform-specific screen implementation.
  */
-public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
+public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider {
     private final List<Page> pages = new ArrayList<>();
     private final List<Page> subpages = new ArrayList<>();
     private UiNavigationBar navigation;
     private int selectedIndex = -1;
 
     public UiPageHost addPage(UiText title, Ui.Node content) {
-        pages.add(new Page(Objects.requireNonNull(title, "title"), Ui.scrollView(Objects.requireNonNull(content, "content"))));
+        pages.add(new Page(Objects.requireNonNull(title, "title"), scrollContent(content)));
         if (selectedIndex < 0) selectedIndex = 0;
         invalidateLayout();
         return this;
@@ -49,7 +49,7 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
 
     /** Opens a temporary second-level page. {@link #pop()} returns to the selected category page. */
     public UiPageHost push(UiText title, Ui.Node content) {
-        subpages.add(new Page(Objects.requireNonNull(title, "title"), Ui.scrollView(Objects.requireNonNull(content, "content"))));
+        subpages.add(new Page(Objects.requireNonNull(title, "title"), scrollContent(content)));
         invalidateLayout();
         return this;
     }
@@ -86,6 +86,11 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
     @Override public List<Ui.Node> childNodes() {
         Ui.ScrollView content = currentContent();
         return content == null ? List.of() : List.of(content);
+    }
+
+    @Override public UiBounds viewportBounds() {
+        Ui.ScrollView content = currentContent();
+        return content == null ? UiBounds.EMPTY : content.bounds();
     }
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -132,10 +137,24 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider {
         Ui.ScrollView content = currentContent();
         return content != null && content.key(keyCode);
     }
+    @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) {
+        if (event.keyCode() == UiKey.ESCAPE && pop()) return true;
+        Ui.ScrollView content = currentContent();
+        return content != null && content.key(event, clipboard);
+    }
+    @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) {
+        Ui.ScrollView content = currentContent();
+        return content != null && content.textInput(event, clipboard);
+    }
 
     private Ui.ScrollView currentContent() {
         if (!subpages.isEmpty()) return subpages.get(subpages.size() - 1).content();
         return selectedIndex < 0 ? null : pages.get(selectedIndex).content();
+    }
+
+    private static Ui.ScrollView scrollContent(Ui.Node content) {
+        Ui.Node node = Objects.requireNonNull(content, "content");
+        return node instanceof Ui.ScrollView scroll ? scroll : Ui.scrollView(node);
     }
 
     private record Page(UiText title, Ui.ScrollView content) { }

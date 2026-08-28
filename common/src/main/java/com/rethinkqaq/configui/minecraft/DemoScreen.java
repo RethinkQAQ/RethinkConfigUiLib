@@ -179,7 +179,7 @@ public final class DemoScreen extends UiScreen {
     }
 
     private static Ui.Node previewPage() {
-        Ui.Node previewContent = new MinecraftPreview((graphics, bounds) -> {
+        Ui.Node previewContent = new MinecraftPreview((graphics, bounds, clip) -> {
             int left = Math.round(bounds.x());
             int top = Math.round(bounds.y());
             int right = Math.round(bounds.x() + bounds.width());

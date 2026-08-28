@@ -39,12 +39,12 @@ public final class MinecraftPreview extends Ui.Node {
     //? if >=26.1 {
     /*@FunctionalInterface
     public interface Renderer {
-        void render(GuiGraphicsExtractor graphics, UiBounds bounds);
+        void render(GuiGraphicsExtractor graphics, UiBounds bounds, UiBounds clip);
     }
     *///?} else {
     @FunctionalInterface
     public interface Renderer {
-        void render(GuiGraphics graphics, UiBounds bounds);
+        void render(GuiGraphics graphics, UiBounds bounds, UiBounds clip);
     }
     //?}
 
@@ -67,6 +67,10 @@ public final class MinecraftPreview extends Ui.Node {
     }
 
     @Override public void render(UiRenderer target, UiTheme theme) {
-        if (target instanceof MinecraftUiRenderer minecraftRenderer) minecraftRenderer.renderPreview(renderer, bounds);
+        if (target instanceof MinecraftUiRenderer minecraftRenderer) {
+            target.pushClip(bounds);
+            try { minecraftRenderer.renderPreview(renderer, bounds, minecraftRenderer.currentClip()); }
+            finally { target.popClip(); }
+        }
     }
 }

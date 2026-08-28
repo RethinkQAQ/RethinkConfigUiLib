@@ -21,10 +21,13 @@ package com.rethinkqaq.configui.core.component;
 
 import java.util.Objects;
 
+import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.UiKeyEvent;
+import com.rethinkqaq.configui.core.UiTextInput;
 
 /** A transparent wrapper carrying tooltip metadata for a host overlay. */
 public class UiTooltip extends Ui.Node {
@@ -79,7 +82,9 @@ public class UiTooltip extends Ui.Node {
     @Override public void setHovered(boolean value) {
         boolean changed = value != hovered(); super.setHovered(value);
         if (value && changed) hoverStartedNanos = System.nanoTime();
-        if (!value) hoverStartedNanos = -1;
+        if (value && hoverStartedNanos < 0) hoverStartedNanos = System.nanoTime();
+        if (!value && !child.focused()) hoverStartedNanos = -1;
+        if (!value && child.focused() && hoverStartedNanos < 0) hoverStartedNanos = System.nanoTime();
     }
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -98,6 +103,8 @@ public class UiTooltip extends Ui.Node {
     @Override public boolean scroll(float x, float y, double amount) { return child.scroll(x, y, amount); }
     @Override public boolean drag(float x, float y, int button) { return child.drag(x, y, button); }
     @Override public boolean key(int keyCode) { return child.key(keyCode); }
+    @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) { return child.key(event, clipboard); }
+    @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) { return child.textInput(event, clipboard); }
     @Override public boolean release(float x, float y, int button) { return child.release(x, y, button); }
     @Override public boolean focusable() { return false; }
 }

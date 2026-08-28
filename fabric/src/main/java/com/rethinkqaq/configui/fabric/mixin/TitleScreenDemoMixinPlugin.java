@@ -19,7 +19,6 @@
 
 package com.rethinkqaq.configui.fabric.mixin;
 
-import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -39,7 +38,12 @@ public final class TitleScreenDemoMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return FabricLoader.getInstance().isDevelopmentEnvironment();
+        // The RCUI demo is a development aid, but the library can also be
+        // loaded from another mod's development run.  Checking only Fabric's
+        // global development flag would therefore leak the demo into every
+        // consuming mod.  The RCUI run configurations opt in explicitly.
+        return Boolean.getBoolean("rethink_config_ui_lib_example")
+            || Boolean.getBoolean("rethink_config_ui_lib.example");
     }
 
     @Override

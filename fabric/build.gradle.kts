@@ -10,6 +10,9 @@ plugins {
 }
 
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
+val configResources = project(":config").layout.buildDirectory.dir("resources/main")
 val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
 
 dependencies {
@@ -44,12 +47,18 @@ dependencies {
 }
 
 tasks.named<Jar>("jar") {
+    from(coreClasses)
+    from(configClasses)
+    from(configResources)
     from({ snakeYamlBundle.files.map { zipTree(it) } }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 tasks.withType<RemapJarTask>().configureEach {
+    from(coreClasses)
+    from(configClasses)
+    from(configResources)
     from({ snakeYamlBundle.files.map { zipTree(it) } }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
     }
@@ -93,14 +102,13 @@ configurations.configureEach {
 
 // Loom development runs use the source-set output directly. Include core there
 // too, while the normal Java jar task packages the same output for distribution.
-val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
-val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 sourceSets.named("main") {
     output.dir(coreClasses)
     output.dir(configClasses)
+    output.dir(configResources)
 }
 tasks.named("classes") {
-    dependsOn(":core:classes", ":config:classes")
+    dependsOn(":core:classes", ":config:classes", ":config:processResources")
 }
 
 tasks.named<Jar>("sourcesJar") {

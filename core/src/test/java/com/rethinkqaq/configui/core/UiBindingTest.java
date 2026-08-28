@@ -88,6 +88,77 @@ class UiBindingTest {
     }
 
     @Test
+    void previewCardSelectsFromCardSurfaceWithoutStealingActionButtonClicks() {
+        AtomicInteger selected = new AtomicInteger();
+        AtomicInteger action = new AtomicInteger();
+        UiPreviewCard card = Ui.previewCard(UiText.literal("Style"), Ui.label(UiText.literal("Preview")))
+            .onClick(selected::incrementAndGet)
+            .action(Ui.button(UiText.literal("Select"), action::incrementAndGet).preferredWidth(84));
+        card.measure(RENDERER, 220, 300, UiTheme.roseLight());
+        card.layout(RENDERER, new UiBounds(0, 0, 220, card.measuredHeight()), UiTheme.roseLight());
+
+        assertTrue(card.click(8, 8, 0));
+        assertEquals(1, selected.get());
+        assertEquals(0, action.get());
+
+        Ui.Node actionNode = card.childNodes().get(1);
+        assertTrue(card.click(actionNode.bounds().x() + 4, actionNode.bounds().y() + 4, 0));
+        assertEquals(1, selected.get());
+        assertEquals(1, action.get());
+    }
+
+    @Test
+    void previewCardActionRowCanFillOneOrTwoEqualSlots() {
+        Ui.Row one = Ui.row().equalChildWidths(true)
+            .add(Ui.button(UiText.literal("Select"), () -> { }));
+        one.measure(RENDERER, 180, 100, UiTheme.roseLight());
+        assertEquals(180f, one.measuredWidth());
+
+        Ui.Row two = Ui.row().gap(8).equalChildWidths(true)
+            .add(Ui.button(UiText.literal("Select"), () -> { }))
+            .add(Ui.button(UiText.literal("Create"), () -> { }));
+        two.measure(RENDERER, 180, 100, UiTheme.roseLight());
+        two.layout(RENDERER, new UiBounds(0, 0, 180, two.measuredHeight()), UiTheme.roseLight());
+        assertEquals(two.children().get(0).bounds().width(), two.children().get(1).bounds().width());
+        assertEquals(86f, two.children().get(0).bounds().width());
+    }
+
+    @Test
+    void nonEqualRowAlignmentUsesActualChildrenWidth() {
+        Ui.Row row = Ui.row().gap(6).alignment(com.rethinkqaq.configui.core.layout.UiRow.Alignment.END)
+            .add(Ui.button(UiText.literal("Import"), () -> { }).preferredWidth(60))
+            .add(Ui.button(UiText.literal("Done"), () -> { }).preferredWidth(40));
+        row.measure(RENDERER, 200, 100, UiTheme.roseLight());
+        row.layout(RENDERER, new UiBounds(10, 0, 200, row.measuredHeight()), UiTheme.roseLight());
+
+        assertEquals(104f, row.children().get(0).bounds().x());
+        assertEquals(170f, row.children().get(1).bounds().x());
+        assertEquals(210f, row.children().get(1).bounds().x() + row.children().get(1).bounds().width());
+    }
+
+    @Test
+    void nestedScaffoldScrollCardAndSelectionListBalanceEveryClip() {
+        ClipRecordingRenderer renderer = new ClipRecordingRenderer();
+        java.util.concurrent.atomic.AtomicReference<String> selected = new java.util.concurrent.atomic.AtomicReference<>("One");
+        UiPreviewCard card = Ui.previewCard(UiText.literal("Preview"), Ui.label(UiText.literal("Model")))
+            .action(Ui.button(UiText.literal("Select"), () -> { }));
+        var choices = Ui.selectionList(() -> java.util.List.of("One", "Two", "Three"),
+            UiBinding.of(selected::get, selected::set), UiText::literal);
+        Ui.Column body = Ui.column().add(card).add(choices);
+        UiScaffold scaffold = Ui.scaffold(Ui.scrollView(body))
+            .footer(Ui.row().alignment(com.rethinkqaq.configui.core.layout.UiRow.Alignment.END)
+                .add(Ui.button(UiText.literal("Done"), () -> { })));
+
+        scaffold.measure(renderer, 240, 260, UiTheme.roseLight());
+        scaffold.layout(renderer, new UiBounds(0, 0, 240, 260), UiTheme.roseLight());
+        scaffold.render(renderer, UiTheme.roseLight());
+
+        assertEquals(renderer.pushes, renderer.pops);
+        assertEquals(0, renderer.depth);
+        assertTrue(renderer.maximumDepth >= 3);
+    }
+
+    @Test
     void toggleWritesThroughBindingImmediately() {
         AtomicBoolean value = new AtomicBoolean();
         Ui.Toggle toggle = Ui.toggle(UiText.literal("Enabled"), UiBinding.of(value::get, value::set));
@@ -297,4 +368,20 @@ class UiBindingTest {
         @Override public void pushClip(UiBounds bounds) { }
         @Override public void popClip() { }
     };
+
+    private static final class ClipRecordingRenderer implements UiRenderer {
+        private int pushes;
+        private int pops;
+        private int depth;
+        private int maximumDepth;
+
+        @Override public void fillRect(UiBounds bounds, int color) { }
+        @Override public void fillRoundRect(UiBounds bounds, float radius, int color) { }
+        @Override public void strokeRoundRect(UiBounds bounds, float radius, float width, int color) { }
+        @Override public void drawText(UiText text, float x, float y, int color) { }
+        @Override public float textWidth(UiText text) { return text.value().length() * 6f; }
+        @Override public float lineHeight() { return 10; }
+        @Override public void pushClip(UiBounds bounds) { pushes++; maximumDepth = Math.max(maximumDepth, ++depth); }
+        @Override public void popClip() { pops++; depth--; }
+    }
 }

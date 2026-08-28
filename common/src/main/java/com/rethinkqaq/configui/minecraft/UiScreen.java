@@ -59,9 +59,6 @@ public class UiScreen extends Screen {
     *///?} else {
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     //?}
-        if (host.background().paintsSurface()) {
-            graphics.fill(0, 0, width, height, host.background().color());
-        }
         host.render(new MinecraftUiRenderer(graphics, 1f), width, height,
             Minecraft.getInstance().getWindow().getGuiScale(), mouseX, mouseY);
     }
@@ -75,13 +72,29 @@ public class UiScreen extends Screen {
     /*@Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) { return host.mouseClicked(event.x(), event.y(), event.button()); }
     @Override public boolean mouseReleased(MouseButtonEvent event) { return host.mouseReleased(event.x(), event.y(), event.button()); }
     @Override public boolean mouseDragged(MouseButtonEvent event, double mouseX, double mouseY) { return host.mouseDragged(event.x(), event.y(), event.button()); }
-    @Override public boolean keyPressed(KeyEvent event) { return host.keyPressed(event.key(), event.modifiers()) || super.keyPressed(event); }
+    @Override public boolean keyPressed(KeyEvent event) {
+        if (event.key() == com.rethinkqaq.configui.core.UiKey.ESCAPE && closeOnEscape()) return true;
+        return host.keyPressed(event.key(), event.modifiers()) || super.keyPressed(event);
+    }
     *///?} else {
     @Override public boolean mouseClicked(double mouseX, double mouseY, int button) { return host.mouseClicked(mouseX, mouseY, button); }
     @Override public boolean mouseReleased(double mouseX, double mouseY, int button) { return host.mouseReleased(mouseX, mouseY, button); }
     @Override public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) { return host.mouseDragged(mouseX, mouseY, button); }
-    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return host.keyPressed(keyCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers); }
+    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == com.rethinkqaq.configui.core.UiKey.ESCAPE && closeOnEscape()) return true;
+        return host.keyPressed(keyCode, modifiers) || super.keyPressed(keyCode, scanCode, modifiers);
+    }
     //?}
+
+    private boolean closeOnEscape() {
+        if (host.root() instanceof com.rethinkqaq.configui.core.UiDialogHost dialogs && dialogs.showingDialog()) {
+            host.keyPressed(com.rethinkqaq.configui.core.UiKey.ESCAPE, 0);
+            return true;
+        }
+        host.keyPressed(com.rethinkqaq.configui.core.UiKey.ESCAPE, 0);
+        onClose();
+        return true;
+    }
 
     //? if >=26.1 {
     /*@Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) { return host.charTyped(event.codepoint(), 0) || super.charTyped(event); }

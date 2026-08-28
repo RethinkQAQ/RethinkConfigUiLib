@@ -20,6 +20,7 @@
 package com.rethinkqaq.configui.core.component;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiKey;
@@ -33,6 +34,8 @@ public class UiButton extends Ui.Node {
     private final Runnable action;
     private boolean pressed;
     private Ui.ButtonVariant variant = Ui.ButtonVariant.PRIMARY;
+    private Supplier<Ui.ButtonVariant> variantSupplier;
+    private float preferredWidth = -1;
 
     public UiButton(UiText text, Runnable action) {
         this.text = Objects.requireNonNull(text, "text");
@@ -40,20 +43,35 @@ public class UiButton extends Ui.Node {
     }
 
     public UiText text() { return text; }
-    public UiButton variant(Ui.ButtonVariant value) { variant = Objects.requireNonNull(value, "variant"); return this; }
+    public UiButton variant(Ui.ButtonVariant value) { variant = Objects.requireNonNull(value, "variant"); variantSupplier = null; return this; }
+    public UiButton variant(Supplier<Ui.ButtonVariant> value) { variantSupplier = Objects.requireNonNull(value, "variant"); return this; }
     public Ui.ButtonVariant variant() { return variant; }
+    /** Sets an optional fixed logical width for compact action rows. */
+    public UiButton preferredWidth(float value) {
+        if (value <= 0) throw new IllegalArgumentException("preferred button width must be positive");
+        preferredWidth = value;
+        invalidateLayout();
+        return this;
+    }
+    private Ui.ButtonVariant currentVariant() {
+        return variantSupplier == null ? variant : Objects.requireNonNull(variantSupplier.get(), "variant supplier result");
+    }
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        measuredWidth = Math.min(maxWidth, Math.max(theme.metrics().controlHeight() * 2,
-            renderer.textWidth(text) + theme.metrics().padding() * 3));
+        float naturalWidth = Math.max(theme.metrics().controlHeight() * 2,
+            renderer.textWidth(text) + theme.metrics().padding() * 3);
+        measuredWidth = Math.min(maxWidth, preferredWidth > 0 ? preferredWidth : naturalWidth);
         measuredHeight = theme.metrics().controlHeight();
     }
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
+        Ui.ButtonVariant currentVariant = currentVariant();
         int color = color(theme);
-        int textColor = (variant == Ui.ButtonVariant.SECONDARY || variant == Ui.ButtonVariant.OUTLINE) && enabled()
+        boolean unselected = currentVariant == Ui.ButtonVariant.SECONDARY || currentVariant == Ui.ButtonVariant.OUTLINE;
+        boolean accentHover = unselected && hoverProgress() > .5f;
+        int textColor = !accentHover && unselected && enabled()
             ? theme.palette().textPrimary() : theme.palette().onAccent();
         renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), color);
         UiText displayed = Ui.fitText(renderer, text, Math.max(0, bounds.width() - theme.metrics().padding() * 2));
@@ -61,25 +79,24 @@ public class UiButton extends Ui.Node {
         Ui.drawFittedText(renderer, displayed, x,
             bounds.y() + (bounds.height() - renderer.lineHeight()) / 2,
             Math.max(0, bounds.x() + bounds.width() - theme.metrics().padding() - x), textColor);
-        if (variant == Ui.ButtonVariant.OUTLINE || variant == Ui.ButtonVariant.SECONDARY) {
+        if (currentVariant == Ui.ButtonVariant.OUTLINE || currentVariant == Ui.ButtonVariant.SECONDARY) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
                 theme.metrics().borderWidth(), theme.palette().border());
         }
         if (hasVisibleFocus(theme)) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(),
-                blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
+                blend(theme.palette().border(), theme.palette().accent(), focusProgress() * .55f));
         }
     }
 
     private int color(UiTheme theme) {
         if (!enabled()) return theme.palette().controlDisabled();
-        return switch (variant) {
-            case PRIMARY -> pressed ? theme.palette().accentPressed()
-                : blend(theme.palette().control(), theme.palette().accentHover(), hoverProgress());
-            case SECONDARY -> pressed ? theme.palette().border()
-                : blend(theme.palette().surfaceRaised(), theme.palette().surface(), hoverProgress());
-            case OUTLINE -> pressed ? theme.palette().border()
-                : blend(theme.palette().surface(), theme.palette().surfaceRaised(), hoverProgress());
+        return switch (currentVariant()) {
+            case PRIMARY -> pressed ? blend(theme.palette().control(), 0xFF000000, .12f)
+                : blend(theme.palette().control(), theme.palette().surfaceRaised(), hoverProgress() * .12f);
+            case SECONDARY, OUTLINE -> pressed ? theme.palette().border()
+                : blend(currentVariant() == Ui.ButtonVariant.OUTLINE ? theme.palette().surface() : theme.palette().surfaceRaised(),
+                    theme.palette().accentHover(), hoverProgress());
             case DANGER -> pressed ? theme.palette().danger()
                 : blend(theme.palette().danger(), theme.palette().accentPressed(), hoverProgress());
         };

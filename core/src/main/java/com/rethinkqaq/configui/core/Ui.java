@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 import com.rethinkqaq.configui.core.component.UiButton;
+import com.rethinkqaq.configui.core.component.UiCustom;
 import com.rethinkqaq.configui.core.component.UiDivider;
 import com.rethinkqaq.configui.core.component.UiIconButton;
 import com.rethinkqaq.configui.core.component.UiLabel;
@@ -67,6 +68,8 @@ public final class Ui {
     public static Panel card() { return new Panel(); }
     public static Section section(UiText title) { return new Section(title); }
     public static Label label(UiText text) { return new Label(text); }
+    /** Creates a platform-neutral one-off custom node. */
+    public static UiCustom.Builder custom() { return UiCustom.builder(); }
     public static Divider divider() { return new Divider(); }
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
@@ -270,10 +273,17 @@ public final class Ui {
     /** Implemented by nodes which own children without using the generic container layout. */
     public interface ChildProvider { List<Node> childNodes(); }
 
-    public abstract static class Container extends Node {
+    /** Composite nodes that also handle an event after their children have been checked. */
+    public interface SelfDispatching { }
+
+    /** Implemented by nodes whose children are only interactive inside a clipped viewport. */
+    public interface ClipProvider { UiBounds viewportBounds(); }
+
+    public abstract static class Container extends Node implements ChildProvider {
         protected final List<Node> children = new ArrayList<>();
         public Container add(Node child) { children.add(Objects.requireNonNull(child, "child")); invalidateLayout(); return this; }
         public List<Node> children() { return List.copyOf(children); }
+        @Override public List<Node> childNodes() { return List.copyOf(children); }
         @Override public boolean click(float x, float y, int button) {
             for (int index = children.size() - 1; index >= 0; index--) if (children.get(index).click(x, y, button)) return true;
             return false;
@@ -305,6 +315,7 @@ public final class Ui {
     public static class Row extends UiRow {
         @Override public Row gap(float value) { super.gap(value); return this; }
         @Override public Row alignment(Alignment value) { super.alignment(value); return this; }
+        @Override public Row equalChildWidths(boolean value) { super.equalChildWidths(value); return this; }
         @Override public Row add(Node child) { super.add(child); return this; }
     }
     public static class Stack extends UiStack {
@@ -329,6 +340,7 @@ public final class Ui {
     public static class Button extends UiButton {
         private Button(UiText text, Runnable action) { super(text, action); }
         @Override public Button variant(ButtonVariant value) { super.variant(value); return this; }
+        @Override public Button variant(Supplier<ButtonVariant> value) { super.variant(value); return this; }
     }
     public static final class IconButton extends UiIconButton {
         private IconButton(UiText text, Runnable action) { super(text, action); }

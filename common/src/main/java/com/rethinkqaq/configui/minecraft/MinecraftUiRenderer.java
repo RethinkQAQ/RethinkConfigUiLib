@@ -29,6 +29,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 //?}
 import net.minecraft.network.chat.Component;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /** GuiGraphics implementation of the renderer capability exposed by core. */
 public final class MinecraftUiRenderer implements UiRenderer {
@@ -39,6 +41,7 @@ public final class MinecraftUiRenderer implements UiRenderer {
     //?}
     private final Font font;
     private final float coordinateScale;
+    private final Deque<UiBounds> clipStack = new ArrayDeque<>();
 
     //? if >=26.1 {
     /*public MinecraftUiRenderer(GuiGraphicsExtractor graphics) {
@@ -126,17 +129,40 @@ public final class MinecraftUiRenderer implements UiRenderer {
     @Override public void drawText(UiText text, float x, float y, int color) { graphics.drawString(font, component(text), Math.round(x), Math.round(y), color, false); }
     //?}
     @Override public float textWidth(UiText text) { return font.width(component(text)); }
+    @Override public void drawText(UiText text, float x, float y, int color, float scale) {
+        if (scale == 1f) { drawText(text, x, y, color); return; }
+        //? if >=1.21.6 {
+        /*graphics.pose().pushMatrix();
+        graphics.pose().scale(scale, scale);
+        *///?} else {
+        graphics.pose().pushPose();
+        graphics.pose().scale(scale, scale, 1f);
+        //?}
+        drawText(text, x / scale, y / scale, color);
+        //? if >=1.21.6 {
+        /*graphics.pose().popMatrix();
+        *///?} else {
+        graphics.pose().popPose();
+        //?}
+    }
+    @Override public float textWidth(UiText text, float scale) { return textWidth(text) * scale; }
+    @Override public float lineHeight(float scale) { return lineHeight() * scale; }
     @Override public float lineHeight() { return font.lineHeight; }
-    //? if >=1.21.8 {
-    /*@Override public void pushClip(UiBounds box) {
-        enableScissorWithAntialiasMargin(box);
-    }
-    *///?} else {
     @Override public void pushClip(UiBounds box) {
-        enableScissorWithAntialiasMargin(box);
+        UiBounds effective = clipStack.isEmpty() ? box : clipStack.peek().intersection(box);
+        clipStack.push(effective);
+        enableScissorWithAntialiasMargin(effective);
     }
-    //?}
-    @Override public void popClip() { graphics.disableScissor(); }
+    @Override public void popClip() {
+        if (clipStack.isEmpty()) throw new IllegalStateException("RCUI clip stack underflow");
+        // Guardian 1.21.10/1.21.11: enableScissor pushes and disableScissor pops.  Re-enabling
+        // the parent here would add a second native stack entry and clip later UI permanently.
+        graphics.disableScissor();
+        clipStack.pop();
+    }
+
+    /** Returns the effective intersection of all active UI clips. */
+    UiBounds currentClip() { return clipStack.peek(); }
 
     /**
      * GuiGraphics transforms scissor coordinates by the current UI pose. Keep one logical pixel
@@ -161,9 +187,9 @@ public final class MinecraftUiRenderer implements UiRenderer {
     }
 
     //? if >=26.1 {
-    /*void renderPreview(MinecraftPreview.Renderer callback, UiBounds bounds) { callback.render(graphics, bounds); }
+    /*void renderPreview(MinecraftPreview.Renderer callback, UiBounds bounds, UiBounds clip) { callback.render(graphics, bounds, clip); }
     *///?} else {
-    void renderPreview(MinecraftPreview.Renderer callback, UiBounds bounds) { callback.render(graphics, bounds); }
+    void renderPreview(MinecraftPreview.Renderer callback, UiBounds bounds, UiBounds clip) { callback.render(graphics, bounds, clip); }
     //?}
 
     private static Component component(UiText text) {

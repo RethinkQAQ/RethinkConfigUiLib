@@ -63,7 +63,13 @@ public final class UiNumberSpec<T extends Number> {
     }
     public T snap(T value) {
         double number = codec.asDouble(value);
-        if (step != null) number = (minimum == null ? 0d : minimum) + Math.round((number - (minimum == null ? 0d : minimum)) / step) * step;
+        if (step != null) {
+            BigDecimal base = BigDecimal.valueOf(minimum == null ? 0d : minimum);
+            BigDecimal increment = BigDecimal.valueOf(step);
+            BigDecimal candidate = new BigDecimal(value.toString());
+            BigDecimal steps = candidate.subtract(base).divide(increment, 0, RoundingMode.HALF_UP);
+            number = base.add(increment.multiply(steps)).doubleValue();
+        }
         if (minimum != null) number = Math.max(minimum, number);
         if (maximum != null) number = Math.min(maximum, number);
         return codec.fromDouble(number);

@@ -4,6 +4,7 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.tasks.GenerateModuleMetadata
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.jvm.tasks.Jar
+import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.kotlin.dsl.withGroovyBuilder
 
 buildscript {
@@ -90,6 +91,8 @@ val jarJarContainer = jarJar.register {
 }
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
 val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
+val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
+val configResources = project(":config").layout.buildDirectory.dir("resources/main")
 
 dependencies {
     implementation(project(":core"))
@@ -105,6 +108,7 @@ dependencies {
 val jarJarTask = tasks.named<JarJar>("jarJar")
 
 jarJarTask.configure {
+    from(configResources)
     from({ snakeYamlBundle.files.map { zipTree(it) } }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
     }
@@ -147,6 +151,7 @@ if (legacyObfuscation) {
 
 tasks.jar {
     archiveClassifier = "slim"
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 
 // ForgeGradle 7's userdev locator registers the resources directory as the
@@ -156,16 +161,20 @@ tasks.jar {
 // directory prevents Forge's module layer from seeing a split package ("main"
 // plus the mod file).
 val forgeCompileClasses = layout.buildDirectory.dir("classes/java/main")
-val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 sourceSets["main"].output.dir(configClasses)
+sourceSets["main"].output.dir(configResources)
 tasks.named("classes") {
-    dependsOn(":core:classes", ":config:classes")
+    dependsOn(":core:classes", ":config:classes", ":config:processResources")
 }
 tasks.named<Jar>("sourcesJar") {
     from(project(":core").file("src/main/java"))
     from(project(":config").file("src/main/java"))
 }
 sourceSets["main"].output.setResourcesDir(forgeCompileClasses)
+tasks.named<ProcessResources>("processResources") {
+    dependsOn(":config:processResources")
+    from(configResources)
+}
 val prepareForgeDevMod = tasks.register("prepareForgeDevMod") {
     dependsOn("classes", "processResources")
 }

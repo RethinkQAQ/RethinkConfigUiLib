@@ -30,4 +30,16 @@ public record UiBounds(float x, float y, float width, float height) {
     public UiBounds offset(float dx, float dy) {
         return new UiBounds(x + dx, y + dy, width, height);
     }
+    public boolean intersects(UiBounds other) {
+        return width > 0 && height > 0 && other.width > 0 && other.height > 0
+            && Math.max(x, other.x) < Math.min(x + width, other.x + other.width)
+            && Math.max(y, other.y) < Math.min(y + height, other.y + other.height);
+    }
+    public UiBounds intersection(UiBounds other) {
+        float left = Math.max(x, other.x);
+        float top = Math.max(y, other.y);
+        float right = Math.min(x + width, other.x + other.width);
+        float bottom = Math.min(y + height, other.y + other.height);
+        return right <= left || bottom <= top ? EMPTY : new UiBounds(left, top, right - left, bottom - top);
+    }
 }

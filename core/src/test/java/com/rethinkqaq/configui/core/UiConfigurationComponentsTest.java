@@ -121,6 +121,23 @@ class UiConfigurationComponentsTest {
     }
 
     @Test
+    void floatNumberFieldAcceptsDecimalStepsWithoutBinaryPrecisionLoss() {
+        AtomicReference<Float> value = new AtomicReference<>(0.05F);
+        UiSetting<Float> setting = UiSetting.of(UiBinding.of(value::get, value::set), 0.05F);
+        UiNumberSpec<Float> spec = UiNumberSpec.builder(UiNumberSpec.FLOAT).range(.05, 1).step(.05).build();
+        UiNumericField<Float> field = Ui.numericField(setting, spec);
+        UiClipboard clipboard = UiClipboard.memory();
+        field.setFocused(true);
+        field.key(new UiKeyEvent(UiKey.A, 0, UiKey.MOD_CONTROL), clipboard);
+        field.textInput(new UiTextInput('0', 0), clipboard);
+        field.textInput(new UiTextInput('.', 0), clipboard);
+        field.textInput(new UiTextInput('1', 0), clipboard);
+        assertTrue(field.commit());
+        assertEquals(.1F, value.get());
+        assertEquals("0.1", field.draft());
+    }
+
+    @Test
     void numberControlKeepsSliderAndInputOnOneRow() {
         AtomicInteger value = new AtomicInteger(2);
         UiSetting<Integer> setting = UiSetting.of(UiBinding.of(value::get, value::set), 2);
@@ -258,7 +275,7 @@ class UiConfigurationComponentsTest {
             .subtitle(UiText.literal("Description"));
         text.measure(RENDERER, 240, 200, theme);
         assertEquals(UiHeaderStyle.TEXT, text.resolvedStyle());
-        assertEquals(32f, text.measuredHeight());
+        assertEquals(33.5f, text.measuredHeight());
 
         UiHeader none = UiHeader.text(UiText.literal("Hidden")).style(UiHeaderStyle.NONE);
         none.measure(RENDERER, 240, 200, theme);

@@ -23,12 +23,14 @@ dependencies {
 // the finished jar. Make core part of that output as well as the final artifact.
 val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
 val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
+val configResources = project(":config").layout.buildDirectory.dir("resources/main")
 sourceSets.named("main") {
     output.dir(coreClasses)
     output.dir(configClasses)
+    output.dir(configResources)
 }
 tasks.named("classes") {
-    dependsOn(":core:classes", ":config:classes")
+    dependsOn(":core:classes", ":config:classes", ":config:processResources")
 }
 tasks.named<Jar>("sourcesJar") {
     from(project(":core").file("src/main/java"))
@@ -36,6 +38,8 @@ tasks.named<Jar>("sourcesJar") {
 }
 
 tasks.named<Jar>("jar") {
+    from(configClasses)
+    from(configResources)
     from({ snakeYamlBundle.files.map { zipTree(it) } }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
     }

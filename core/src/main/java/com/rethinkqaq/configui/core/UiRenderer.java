@@ -25,8 +25,17 @@ public interface UiRenderer {
     void fillRoundRect(UiBounds bounds, float radius, int color);
     void strokeRoundRect(UiBounds bounds, float radius, float width, int color);
     void drawText(UiText text, float x, float y, int color);
+    /** Draws text at a scale while keeping the unscaled API source-compatible. */
+    default void drawText(UiText text, float x, float y, int color, float scale) {
+        drawText(text, x, y, color);
+    }
+    default void drawCenteredText(UiText text, float centerX, float y, int color) {
+        drawText(text, centerX - textWidth(text) / 2f, y, color);
+    }
     float textWidth(UiText text);
+    default float textWidth(UiText text, float scale) { return textWidth(text) * scale; }
     float lineHeight();
+    default float lineHeight(float scale) { return lineHeight() * scale; }
     void pushClip(UiBounds bounds);
     void popClip();
 }
