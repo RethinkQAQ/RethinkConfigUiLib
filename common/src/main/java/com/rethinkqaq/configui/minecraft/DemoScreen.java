@@ -22,7 +22,9 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBadge;
 import com.rethinkqaq.configui.core.UiBinding;
 import com.rethinkqaq.configui.core.UiDialogHost;
+import com.rethinkqaq.configui.core.UiGrid;
 import com.rethinkqaq.configui.core.UiPageHost;
+import com.rethinkqaq.configui.core.UiPreviewCard;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.layout.UiHeader;
@@ -66,13 +68,18 @@ public final class DemoScreen extends UiScreen {
         UiDialogHost dialogs = Ui.dialogHost();
         UiPageHost pages = Ui.pageHost();
         pages.addPage(UiText.literal("General"), generalPage(enabled, scale, mode, host, dialogs))
-            .addPage(UiText.literal("Preview"), previewPage())
+            .addPage(UiText.literal("Preview"), previewPage(dialogs))
             .addPage(UiText.literal("Advanced"), advancedPage());
+
+        Ui.Row footer = Ui.row().gap(8)
+            .add(Ui.button(UiText.literal("Reset demo"), () -> { }).variant(Ui.ButtonVariant.SECONDARY))
+            .add(Ui.button(UiText.literal("Done"), () -> { }));
 
         UiTemplate template = Ui.topNavigationTemplate()
             .header(header)
             .navigation(pages.navigation())
             .content(pages)
+            .footer(footer)
             .maxContentWidth(1080)
             .regionGap(12)
             .build();
@@ -178,29 +185,71 @@ public final class DemoScreen extends UiScreen {
             .add(actions);
     }
 
-    private static Ui.Node previewPage() {
-        Ui.Node previewContent = new MinecraftPreview((graphics, bounds, clip) -> {
+    private static Ui.Node previewPage(UiDialogHost dialogs) {
+        AtomicReference<Integer> selected = new AtomicReference<>(0);
+        UiGrid cards = Ui.grid().minimumColumnWidth(168).maximumColumnWidth(188).gap(12);
+        cards.add(previewCard("No action", "Card click only", selected, 0, null, null));
+        cards.add(previewCard("One action", "One full-width action", selected, 1,
+            Ui.button(UiText.literal("Select"), () -> selected.set(1)), null));
+        cards.add(previewCard("Two actions", "Actions share the row", selected, 2,
+            Ui.row().gap(6).equalChildWidths(true)
+                .add(Ui.button(UiText.literal("Select"), () -> selected.set(2)))
+                .add(Ui.button(UiText.literal("Create"), () -> { })), null));
+        cards.add(previewCard("Tooltip", "Hover the card for details", selected, 3,
+            Ui.button(UiText.literal("Manage"), () -> { }),
+            UiText.literal("Every card has a bounded preview slot and an independent action area.")));
+        cards.add(previewCard("Dialog", "Open a modal above content", selected, 4,
+            Ui.button(UiText.literal("Open dialog"), () -> dialogs.show(dialogContent(dialogs))), null));
+        cards.add(previewCard("Clip probe", "The preview intentionally overdraws", selected, 5,
+            Ui.button(UiText.literal("Select"), () -> selected.set(5)), null));
+
+        return Ui.column().gap(14)
+            .add(Ui.label(UiText.literal("Preview card regression: click any card, hover for a tooltip, and scroll this page.")))
+            .add(cards)
+            .add(Ui.section(UiText.literal("CLIP PROBE"))
+                .add(Ui.label(UiText.literal("The pink preview rectangles deliberately extend beyond their slots. No color should escape a card or the content viewport."))
+                    .wrap(true)));
+    }
+
+    private static Ui.Node previewCard(String title, String description, AtomicReference<Integer> selected,
+                                       int id, Ui.Node action, UiText tooltip) {
+        UiPreviewCard card = Ui.previewCard(UiText.literal(title), oversizedPreview(id))
+            .description(UiText.literal(description))
+            .onClick(() -> selected.set(id))
+            .selected(() -> selected.get() == id);
+        if (action != null) card.action(action);
+        Ui.Node result = card;
+        if (tooltip != null) result = Ui.tooltip(result, tooltip);
+        return result;
+    }
+
+    private static Ui.Node oversizedPreview(int id) {
+        int color = switch (id % 3) {
+            case 0 -> 0xFFF39ABA;
+            case 1 -> 0xFF9ABAF3;
+            default -> 0xFF9AF3BA;
+        };
+        return new MinecraftPreview((graphics, bounds, clip) -> {
             int left = Math.round(bounds.x());
             int top = Math.round(bounds.y());
             int right = Math.round(bounds.x() + bounds.width());
             int bottom = Math.round(bounds.y() + bounds.height());
-            graphics.fill(left, top, right, bottom, 0xFFFCE8F0);
-            int size = Math.min(right - left, bottom - top) / 2;
             int centerX = (left + right) / 2;
             int centerY = (top + bottom) / 2;
-            graphics.fill(centerX - size / 2, centerY - size / 2,
-                centerX + size / 2, centerY + size / 2, 0xFFF39ABA);
-        });
-        return Ui.column().gap(14)
-            .add(Ui.previewCard(UiText.literal("LIVE PREVIEW"), previewContent)
-                .description(UiText.literal("A platform renderer may draw an item, entity or model here."))
-                .action(Ui.button(UiText.literal("Open preview"), () -> { }).variant(Ui.ButtonVariant.SECONDARY)))
-            .add(Ui.previewCard(UiText.literal("THEME"),
-                Ui.panel().add(Ui.label(UiText.literal("roseLight")))
-                    .add(Ui.badge(UiText.literal("DEFAULT")).tone(UiBadge.Tone.SUCCESS)))
-                .description(UiText.literal("Themes use semantic colours and immutable metrics.")));
+            int size = Math.max(right - left, bottom - top);
+            graphics.fill(centerX - size, centerY - size, centerX + size, centerY + size, 0xFFFCE8F0);
+            graphics.fill(centerX - size / 3, centerY - size / 3,
+                centerX + size / 3, centerY + size / 3, color);
+        }).preferredHeight(92);
     }
 
+    private static Ui.Node dialogContent(UiDialogHost dialogs) {
+        return Ui.panel().padding(18)
+            .add(Ui.section(UiText.literal("DIALOG REGRESSION"))
+                .add(Ui.label(UiText.literal("This dialog is rendered above the page and is not clipped by the scrolling content."))
+                    .wrap(true))
+                .add(Ui.button(UiText.literal("Close"), dialogs::close)));
+    }
     private static Ui.Node advancedPage() {
         Ui.Container disabled = Ui.section(UiText.literal("STATES"));
         disabled.add(Ui.settingRow(UiText.literal("Disabled toggle"),
