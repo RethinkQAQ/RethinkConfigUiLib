@@ -108,6 +108,7 @@ dependencies {
 val jarJarTask = tasks.named<JarJar>("jarJar")
 
 jarJarTask.configure {
+    from(configClasses)
     from(configResources)
     from({ snakeYamlBundle.files.map { zipTree(it) } }) {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
@@ -161,8 +162,6 @@ tasks.jar {
 // directory prevents Forge's module layer from seeing a split package ("main"
 // plus the mod file).
 val forgeCompileClasses = layout.buildDirectory.dir("classes/java/main")
-sourceSets["main"].output.dir(configClasses)
-sourceSets["main"].output.dir(configResources)
 tasks.named("classes") {
     dependsOn(":core:classes", ":config:classes", ":config:processResources")
 }
@@ -173,7 +172,6 @@ tasks.named<Jar>("sourcesJar") {
 sourceSets["main"].output.setResourcesDir(forgeCompileClasses)
 tasks.named<ProcessResources>("processResources") {
     dependsOn(":config:processResources")
-    from(configResources)
 }
 val prepareForgeDevMod = tasks.register("prepareForgeDevMod") {
     dependsOn("classes", "processResources")
