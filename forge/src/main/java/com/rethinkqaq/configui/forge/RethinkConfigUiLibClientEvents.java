@@ -20,7 +20,7 @@ package com.rethinkqaq.configui.forge;
 
 import com.rethinkqaq.configui.minecraft.DemoEntrypoint;
 import com.rethinkqaq.configui.minecraft.FlatDemoButton;
-import com.rethinkqaq.configui.minecraft.RethinkConfigUiLib;
+import com.rethinkqaq.configui.RethinkConfigUiLib;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraftforge.client.event.ScreenEvent;

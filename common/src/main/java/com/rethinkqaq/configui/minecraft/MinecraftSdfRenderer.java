@@ -18,6 +18,7 @@
  */
 package com.rethinkqaq.configui.minecraft;
 
+import com.rethinkqaq.configui.RethinkConfigUiLib;
 import com.rethinkqaq.configui.core.UiBounds;
 //? if <1.21.3 {
 import com.mojang.blaze3d.systems.RenderSystem;

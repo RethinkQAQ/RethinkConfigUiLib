@@ -18,7 +18,7 @@
  */
 package com.rethinkqaq.configui.forge;
 
-import com.rethinkqaq.configui.minecraft.RethinkConfigUiLib;
+import com.rethinkqaq.configui.RethinkConfigUiLib;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
