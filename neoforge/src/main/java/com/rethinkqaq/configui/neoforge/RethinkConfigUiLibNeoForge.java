@@ -18,7 +18,7 @@
  */
 package com.rethinkqaq.configui.neoforge;
 
-import com.rethinkqaq.configui.minecraft.RethinkConfigUiLib;
+import com.rethinkqaq.configui.RethinkConfigUiLib;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 

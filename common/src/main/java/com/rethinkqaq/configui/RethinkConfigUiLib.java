@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License along
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
-package com.rethinkqaq.configui.minecraft;
+package com.rethinkqaq.configui;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

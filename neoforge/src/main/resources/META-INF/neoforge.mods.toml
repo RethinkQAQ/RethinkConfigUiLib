@@ -14,6 +14,12 @@ authors="${modAuthor}"
 description='''${modDescription}'''
 displayURL="https://github.com/${modGitHub}"
 
+[[mixins]]
+config="${modId}.mixins.json"
+
+[[mixins]]
+config="${modId}.neoforge.mixins.json"
+
 [[dependencies.${modId}]]
 modId="neoforge"
 type="required"

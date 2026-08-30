@@ -11,6 +11,8 @@ plugins {
 
 apply(plugin = "dev.kikugie.fletching-table.neoforge")
 
+configureMixinSupport(MixinTarget.NEOFORGE)
+
 val accessWidener = rootProject.file(
     "common/src/main/resources/accesswideners/${commonMod.mc}-${commonMod.id}.accesswidener"
 )
@@ -22,6 +24,12 @@ extensions.getByName("fletchingTable").withGroovyBuilder {
             "add"(accessWidener.absolutePath)
         }
     }
+}
+
+mixin {
+    add(sourceSets["main"], "${commonMod.id}.refmap.json")
+    config("${commonMod.id}.mixins.json")
+    config("${commonMod.id}.neoforge.mixins.json")
 }
 
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
