@@ -30,6 +30,7 @@ import com.rethinkqaq.configui.core.UiTheme;
 /** A single-child scrolling viewport. */
 public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     private float offset;
+    private boolean fillViewportChild;
 
     public UiScrollView(Ui.Node child) { add(child); }
 
@@ -37,6 +38,7 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     public float offset() { return offset; }
     @Override public UiBounds viewportBounds() { return bounds; }
     public void reset() { offset = 0; }
+    protected final void setFillViewportChild(boolean value) { fillViewportChild = value; invalidateLayout(); }
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -48,9 +50,10 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     @Override
     public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
-        float maximum = Math.max(0, child().measuredHeight() - value.height());
+        float contentHeight = contentHeight(value.height());
+        float maximum = Math.max(0, contentHeight - value.height());
         offset = Math.max(0, Math.min(maximum, offset));
-        child().layout(renderer, new UiBounds(value.x(), value.y() - offset, value.width(), child().measuredHeight()), theme);
+        child().layout(renderer, new UiBounds(value.x(), value.y() - offset, value.width(), contentHeight), theme);
     }
 
     @Override
@@ -63,7 +66,7 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     @Override
     public boolean scroll(float x, float y, double amount) {
         if (!bounds.contains(x, y)) return false;
-        offset = Math.max(0, Math.min(Math.max(0, child().measuredHeight() - bounds.height()),
+        offset = Math.max(0, Math.min(Math.max(0, contentHeight(bounds.height()) - bounds.height()),
             (float) (offset - amount * 14)));
         return true;
     }
@@ -96,7 +99,7 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     }
 
     private boolean adjustOffset(int keyCode) {
-        float max = Math.max(0, child().measuredHeight() - bounds.height());
+        float max = Math.max(0, contentHeight(bounds.height()) - bounds.height());
         float page = Math.max(1, bounds.height() - 14);
         if (keyCode == UiKey.UP) { offset = Math.max(0, offset - 14); return true; }
         if (keyCode == UiKey.DOWN) { offset = Math.min(max, offset + 14); return true; }
@@ -105,5 +108,9 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
         if (keyCode == UiKey.HOME) { offset = 0; return true; }
         if (keyCode == UiKey.END) { offset = max; return true; }
         return false;
+    }
+
+    private float contentHeight(float viewportHeight) {
+        return fillViewportChild ? Math.max(child().measuredHeight(), viewportHeight) : child().measuredHeight();
     }
 }

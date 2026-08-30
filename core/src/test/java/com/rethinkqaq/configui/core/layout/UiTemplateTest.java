@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiBounds;
+import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
@@ -84,7 +85,7 @@ class UiTemplateTest {
         UiTemplate template = Ui.template()
             .content(Ui.label(UiText.literal("Content")))
             .footer(footer)
-            .footerAlignment(UiTemplate.FooterAlignment.SPACE_BETWEEN)
+            .footerAlignment(UiMainAxisAlignment.SPACE_BETWEEN)
             .build();
 
         layout(template, 800, 200);

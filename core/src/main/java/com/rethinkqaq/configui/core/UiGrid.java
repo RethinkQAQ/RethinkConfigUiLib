@@ -24,15 +24,12 @@ import java.util.List;
 
 /** A responsive grid which chooses its column count from the available logical width. */
 public final class UiGrid extends Ui.Container {
-    /** Horizontal alignment of each row's cards inside the grid viewport. */
-    public enum Alignment { START, CENTER, END }
-
     private float minimumColumnWidth = 156;
     // Keep preview cards portrait-oriented on wide screens by default. Hosts can override this
     // for specialized content through maximumColumnWidth(...).
     private float maximumColumnWidth = 188;
     private float gap = -1;
-    private Alignment alignment = Alignment.CENTER;
+    private UiMainAxisAlignment mainAxisAlignment = UiMainAxisAlignment.CENTER;
     private int columns = 1;
     private float cellWidth;
     private final List<Float> rowHeights = new ArrayList<>();
@@ -58,16 +55,21 @@ public final class UiGrid extends Ui.Container {
         return this;
     }
 
+    @Override public UiGrid add(Ui.Node child) {
+        super.add(child);
+        return this;
+    }
+
     public int columns() { return columns; }
 
     /** Sets how each row is positioned when it does not fill the grid width. */
-    public UiGrid alignment(Alignment value) {
-        alignment = java.util.Objects.requireNonNull(value, "alignment");
+    public UiGrid mainAxisAlignment(UiMainAxisAlignment value) {
+        mainAxisAlignment = java.util.Objects.requireNonNull(value, "mainAxisAlignment");
         invalidateLayout();
         return this;
     }
 
-    public Alignment alignment() { return alignment; }
+    public UiMainAxisAlignment mainAxisAlignment() { return mainAxisAlignment; }
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -105,14 +107,18 @@ public final class UiGrid extends Ui.Container {
             int rowItems = Math.min(columns, children.size() - index);
             float rowWidth = rowItems * cellWidth + actualGap * Math.max(0, rowItems - 1);
             float freeWidth = Math.max(0, value.width() - rowWidth);
-            float rowX = value.x() + switch (alignment) {
-                case START -> 0;
+            float rowGap = actualGap;
+            float rowX = value.x() + switch (mainAxisAlignment) {
+                case START, SPACE_BETWEEN -> 0;
                 case CENTER -> freeWidth / 2f;
                 case END -> freeWidth;
             };
+            if (mainAxisAlignment == UiMainAxisAlignment.SPACE_BETWEEN && rowItems > 1) {
+                rowGap += freeWidth / (rowItems - 1);
+            }
             for (int column = 0; column < rowItems && index < children.size(); column++, index++) {
                 children.get(index).layout(renderer, new UiBounds(
-                    rowX + column * (cellWidth + actualGap), y, cellWidth, rowHeight), theme);
+                    rowX + column * (cellWidth + rowGap), y, cellWidth, rowHeight), theme);
             }
             y += rowHeight + actualGap;
         }

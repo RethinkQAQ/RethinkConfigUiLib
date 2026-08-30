@@ -59,6 +59,7 @@ public final class UiHost {
     private UiDensity density = UiDensity.COMFORTABLE;
     private UiTheme effectiveTheme;
     private UiBackground background;
+    private boolean inspectorVisible;
 
     public UiHost(Ui.Node root, UiTheme theme) {
         this(root, theme, LayoutMode.CONTENT);
@@ -91,6 +92,9 @@ public final class UiHost {
     public Ui.Node root() { return root; }
     /** Returns a laid-out tree snapshot for development diagnostics and host tooling. */
     public UiDebugSnapshot debugSnapshot() { return UiDebugSnapshot.of(root); }
+    /** Enables the development Inspector overlay. Hosts own any key binding for this switch. */
+    public UiHost inspectorVisible(boolean value) { inspectorVisible = value; return this; }
+    public boolean inspectorVisible() { return inspectorVisible; }
     /** Overrides the default opaque theme background for standalone or embedded hosts. */
     public UiHost background(UiBackground value) { background = Objects.requireNonNull(value, "background"); return this; }
     public UiBackground background() {
@@ -167,6 +171,7 @@ public final class UiHost {
         hoveredTooltip(root, canvasMouseX, canvasMouseY).ifPresent(tooltip -> renderTooltip(renderer, tooltip, canvasWidth, canvasHeight,
             Math.round(canvasMouseX), Math.round(canvasMouseY)));
         notifications.render(renderer, canvasWidth, canvasHeight, renderTheme);
+        if (inspectorVisible) UiInspectorOverlay.render(renderer, debugSnapshot(), renderTheme);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

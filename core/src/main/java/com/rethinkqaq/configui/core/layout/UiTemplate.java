@@ -24,6 +24,7 @@ import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiKeyEvent;
+import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiPageHost;
 import com.rethinkqaq.configui.core.UiScaffold;
@@ -39,8 +40,6 @@ import java.util.Objects;
  * header, top navigation, independently scrolling content and an optional footer.
  */
 public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
-    public enum FooterAlignment { START, CENTER, END, SPACE_BETWEEN }
-
     private final Ui.Node composed;
     private final UiBackground background;
     private final Slots slots;
@@ -97,7 +96,7 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         float maxContentWidth,
         float regionGap,
         boolean scrollContent,
-        FooterAlignment footerAlignment,
+        UiMainAxisAlignment footerAlignment,
         boolean footerDivider
     ) {
         public Options {
@@ -117,7 +116,7 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         private float maxContentWidth = 1200;
         private float regionGap = -1;
         private boolean scrollContent = true;
-        private FooterAlignment footerAlignment = FooterAlignment.END;
+        private UiMainAxisAlignment footerAlignment = UiMainAxisAlignment.END;
         // The footer is separated by layout and surface contrast by default. Consumers can
         // opt into an explicit divider with footerDivider(true).
         private boolean footerDivider = false;
@@ -146,7 +145,7 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
             return this;
         }
         public Builder scrollContent(boolean value) { scrollContent = value; return this; }
-        public Builder footerAlignment(FooterAlignment value) {
+        public Builder footerAlignment(UiMainAxisAlignment value) {
             footerAlignment = Objects.requireNonNull(value, "footerAlignment");
             return this;
         }
@@ -197,11 +196,11 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
 
     private static final class FooterNode extends Ui.Node implements Ui.ChildProvider {
         private final Ui.Node child;
-        private final FooterAlignment alignment;
+        private final UiMainAxisAlignment alignment;
         private final boolean divider;
         private static final float DIVIDER_HEIGHT = 1;
 
-        private FooterNode(Ui.Node child, FooterAlignment alignment, boolean divider) {
+        private FooterNode(Ui.Node child, UiMainAxisAlignment alignment, boolean divider) {
             this.child = child;
             this.alignment = alignment;
             this.divider = divider;
@@ -219,11 +218,11 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         @Override public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
             super.layout(renderer, value, theme);
             float top = value.y() + (divider ? DIVIDER_HEIGHT + dividerGap(theme) : 0);
-            float width = alignment == FooterAlignment.SPACE_BETWEEN && child instanceof UiRow
+            float width = alignment == UiMainAxisAlignment.SPACE_BETWEEN && child instanceof UiRow
                 ? value.width() : child.measuredWidth();
-            if (child instanceof UiRow row && alignment == FooterAlignment.SPACE_BETWEEN
-                && row.alignment() != UiRow.Alignment.SPACE_BETWEEN) {
-                row.alignment(UiRow.Alignment.SPACE_BETWEEN);
+            if (child instanceof UiRow row && alignment == UiMainAxisAlignment.SPACE_BETWEEN
+                && row.mainAxisAlignment() != UiMainAxisAlignment.SPACE_BETWEEN) {
+                row.mainAxisAlignment(UiMainAxisAlignment.SPACE_BETWEEN);
             }
             float x = switch (alignment) {
                 case START, SPACE_BETWEEN -> value.x();

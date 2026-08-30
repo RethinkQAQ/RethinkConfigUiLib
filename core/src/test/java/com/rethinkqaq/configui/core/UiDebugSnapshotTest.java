@@ -32,6 +32,10 @@ class UiDebugSnapshotTest {
         UiDebugSnapshot snapshot = UiDebugSnapshot.of(root);
         assertEquals("Column", snapshot.type());
         assertTrue(snapshot.visible());
+        assertEquals(new UiBounds(5, 6, 100, 50), snapshot.layoutBounds());
+        assertEquals(snapshot.layoutBounds(), snapshot.contentBounds());
+        assertEquals(snapshot.layoutBounds(), snapshot.clipBounds());
+        assertEquals(snapshot.layoutBounds(), snapshot.eventBounds());
         assertEquals(1, snapshot.children().size());
         assertEquals(1, snapshot.children().get(0).depth());
         assertTrue(snapshot.children().get(0).interactive());

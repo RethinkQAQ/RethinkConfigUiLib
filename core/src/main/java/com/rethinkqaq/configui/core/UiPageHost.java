@@ -154,7 +154,8 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.Cl
 
     private static Ui.ScrollView scrollContent(Ui.Node content) {
         Ui.Node node = Objects.requireNonNull(content, "content");
-        return node instanceof Ui.ScrollView scroll ? scroll : Ui.scrollView(node);
+        Ui.ScrollView scroll = node instanceof Ui.ScrollView existing ? existing : Ui.scrollView(node);
+        return scroll.fillViewportChild();
     }
 
     private record Page(UiText title, Ui.ScrollView content) { }

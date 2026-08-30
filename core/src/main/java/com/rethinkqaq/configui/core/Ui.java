@@ -321,11 +321,14 @@ public final class Ui {
     // Compatibility aliases. New code should import the concrete class from layout/ or component/.
     public static class Column extends UiColumn {
         @Override public Column gap(float value) { super.gap(value); return this; }
+        @Override public Column mainAxisAlignment(UiMainAxisAlignment value) { super.mainAxisAlignment(value); return this; }
+        @Override public Column crossAxisAlignment(UiCrossAxisAlignment value) { super.crossAxisAlignment(value); return this; }
         @Override public Column add(Node child) { super.add(child); return this; }
     }
     public static class Row extends UiRow {
         @Override public Row gap(float value) { super.gap(value); return this; }
-        @Override public Row alignment(Alignment value) { super.alignment(value); return this; }
+        @Override public Row mainAxisAlignment(UiMainAxisAlignment value) { super.mainAxisAlignment(value); return this; }
+        @Override public Row crossAxisAlignment(UiCrossAxisAlignment value) { super.crossAxisAlignment(value); return this; }
         @Override public Row equalChildWidths(boolean value) { super.equalChildWidths(value); return this; }
         @Override public Row add(Node child) { super.add(child); return this; }
     }
@@ -367,6 +370,7 @@ public final class Ui {
     }
     public static final class ScrollView extends UiScrollView {
         private ScrollView(Node child) { super(child); }
+        Ui.ScrollView fillViewportChild() { setFillViewportChild(true); return this; }
     }
     public static final class Tooltip extends UiTooltip {
         private Tooltip(Node child, UiText text) { super(child, text); }

@@ -21,15 +21,16 @@ package com.rethinkqaq.configui.core.layout;
 
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBounds;
+import com.rethinkqaq.configui.core.UiCrossAxisAlignment;
+import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTheme;
 
 /** A horizontal flow container. */
 public class UiRow extends Ui.Container {
-    public enum Alignment { START, CENTER, END, SPACE_BETWEEN }
-
     private float gap = -1;
-    private Alignment alignment = Alignment.START;
+    private UiMainAxisAlignment mainAxisAlignment = UiMainAxisAlignment.START;
+    private UiCrossAxisAlignment crossAxisAlignment = UiCrossAxisAlignment.STRETCH;
     private boolean equalChildWidths;
 
     public UiRow gap(float value) {
@@ -45,13 +46,21 @@ public class UiRow extends Ui.Container {
 
     public float gap() { return gap; }
 
-    public UiRow alignment(Alignment value) {
-        alignment = java.util.Objects.requireNonNull(value, "alignment");
+    public UiRow mainAxisAlignment(UiMainAxisAlignment value) {
+        mainAxisAlignment = java.util.Objects.requireNonNull(value, "mainAxisAlignment");
         invalidateLayout();
         return this;
     }
 
-    public Alignment alignment() { return alignment; }
+    public UiMainAxisAlignment mainAxisAlignment() { return mainAxisAlignment; }
+
+    public UiRow crossAxisAlignment(UiCrossAxisAlignment value) {
+        crossAxisAlignment = java.util.Objects.requireNonNull(value, "crossAxisAlignment");
+        invalidateLayout();
+        return this;
+    }
+
+    public UiCrossAxisAlignment crossAxisAlignment() { return crossAxisAlignment; }
 
     public UiRow equalChildWidths(boolean value) {
         equalChildWidths = value;
@@ -86,7 +95,7 @@ public class UiRow extends Ui.Container {
             float slotWidth = Math.max(0, (value.width() - actualGap * (children.size() - 1)) / children.size());
             float x = value.x();
             for (Ui.Node child : children) {
-                child.layout(renderer, new UiBounds(x, value.y(), slotWidth, value.height()), theme);
+                child.layout(renderer, crossBounds(x, slotWidth, child, value), theme);
                 x += slotWidth + actualGap;
             }
             return;
@@ -95,18 +104,29 @@ public class UiRow extends Ui.Container {
         for (Ui.Node child : children) childrenWidth += child.measuredWidth();
         float baseGaps = actualGap * Math.max(0, children.size() - 1);
         float free = Math.max(0, value.width() - childrenWidth - baseGaps);
-        float x = switch (alignment) {
+        float x = switch (mainAxisAlignment) {
             case START, SPACE_BETWEEN -> value.x();
             case CENTER -> value.x() + free / 2f;
             case END -> value.x() + free;
         };
-        if (alignment == Alignment.SPACE_BETWEEN && children.size() > 1) {
+        if (mainAxisAlignment == UiMainAxisAlignment.SPACE_BETWEEN && children.size() > 1) {
             actualGap += free / (children.size() - 1);
         }
         for (Ui.Node child : children) {
-            child.layout(renderer, new UiBounds(x, value.y(), child.measuredWidth(), value.height()), theme);
+            child.layout(renderer, crossBounds(x, child.measuredWidth(), child, value), theme);
             x += child.measuredWidth() + actualGap;
         }
+    }
+
+    private UiBounds crossBounds(float x, float width, Ui.Node child, UiBounds rowBounds) {
+        float height = crossAxisAlignment == UiCrossAxisAlignment.STRETCH
+            ? rowBounds.height() : Math.min(rowBounds.height(), child.measuredHeight());
+        float y = switch (crossAxisAlignment) {
+            case START, STRETCH -> rowBounds.y();
+            case CENTER -> rowBounds.y() + Math.max(0, rowBounds.height() - height) / 2f;
+            case END -> rowBounds.y() + Math.max(0, rowBounds.height() - height);
+        };
+        return new UiBounds(x, y, width, height);
     }
 
     @Override

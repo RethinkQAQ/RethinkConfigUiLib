@@ -125,7 +125,7 @@ class UiBindingTest {
 
     @Test
     void nonEqualRowAlignmentUsesActualChildrenWidth() {
-        Ui.Row row = Ui.row().gap(6).alignment(com.rethinkqaq.configui.core.layout.UiRow.Alignment.END)
+        Ui.Row row = Ui.row().gap(6).mainAxisAlignment(UiMainAxisAlignment.END)
             .add(Ui.button(UiText.literal("Import"), () -> { }).preferredWidth(60))
             .add(Ui.button(UiText.literal("Done"), () -> { }).preferredWidth(40));
         row.measure(RENDERER, 200, 100, UiTheme.roseLight());
@@ -134,6 +134,56 @@ class UiBindingTest {
         assertEquals(104f, row.children().get(0).bounds().x());
         assertEquals(170f, row.children().get(1).bounds().x());
         assertEquals(210f, row.children().get(1).bounds().x() + row.children().get(1).bounds().width());
+    }
+
+    @Test
+    void rowAndColumnApplyMainAndCrossAxisAlignment() {
+        Ui.Node first = Ui.label(UiText.literal("First"));
+        Ui.Node second = Ui.label(UiText.literal("Second"));
+        Ui.Row row = Ui.row().gap(4).mainAxisAlignment(UiMainAxisAlignment.SPACE_BETWEEN)
+            .crossAxisAlignment(UiCrossAxisAlignment.CENTER).add(first).add(second);
+        row.measure(RENDERER, 160, 40, UiTheme.roseLight());
+        row.layout(RENDERER, new UiBounds(0, 0, 160, 40), UiTheme.roseLight());
+        assertEquals(0f, first.bounds().x());
+        assertEquals(160f, second.bounds().x() + second.bounds().width());
+        assertTrue(first.bounds().y() > 0);
+
+        Ui.Node top = Ui.label(UiText.literal("Top"));
+        Ui.Node bottom = Ui.label(UiText.literal("Bottom"));
+        Ui.Column column = Ui.column().gap(4).mainAxisAlignment(UiMainAxisAlignment.END)
+            .crossAxisAlignment(UiCrossAxisAlignment.CENTER).add(top).add(bottom);
+        column.measure(RENDERER, 160, 80, UiTheme.roseLight());
+        column.layout(RENDERER, new UiBounds(0, 0, 160, 80), UiTheme.roseLight());
+        assertEquals(80f, bottom.bounds().y() + bottom.bounds().height());
+        assertTrue(top.bounds().x() > 0);
+    }
+
+    @Test
+    void gridAlignsIncompleteRowsAlongTheMainAxis() {
+        UiGrid grid = Ui.grid().minimumColumnWidth(40).maximumColumnWidth(40).gap(10)
+            .mainAxisAlignment(UiMainAxisAlignment.END)
+            .add(Ui.label(UiText.literal("One")))
+            .add(Ui.label(UiText.literal("Two")))
+            .add(Ui.label(UiText.literal("Three")))
+            .add(Ui.label(UiText.literal("Four")));
+        grid.measure(RENDERER, 150, 100, UiTheme.roseLight());
+        grid.layout(RENDERER, new UiBounds(0, 0, 150, grid.measuredHeight()), UiTheme.roseLight());
+        assertEquals(110f, grid.children().get(3).bounds().x());
+    }
+
+    @Test
+    void pageHostFillsShortPageViewportWithoutChangingStandaloneScrollView() {
+        Ui.Column shortPage = Ui.column().add(Ui.label(UiText.literal("Short")));
+        UiPageHost pages = Ui.pageHost().addPage(UiText.literal("Page"), shortPage);
+        pages.measure(RENDERER, 120, 80, UiTheme.roseLight());
+        pages.layout(RENDERER, new UiBounds(0, 0, 120, 80), UiTheme.roseLight());
+        assertEquals(80f, shortPage.bounds().height());
+
+        Ui.Column standaloneContent = Ui.column().add(Ui.label(UiText.literal("Short")));
+        Ui.ScrollView standalone = Ui.scrollView(standaloneContent);
+        standalone.measure(RENDERER, 120, 80, UiTheme.roseLight());
+        standalone.layout(RENDERER, new UiBounds(0, 0, 120, 80), UiTheme.roseLight());
+        assertTrue(standaloneContent.bounds().height() < 80f);
     }
 
     @Test
@@ -146,7 +196,7 @@ class UiBindingTest {
             UiBinding.of(selected::get, selected::set), UiText::literal);
         Ui.Column body = Ui.column().add(card).add(choices);
         UiScaffold scaffold = Ui.scaffold(Ui.scrollView(body))
-            .footer(Ui.row().alignment(com.rethinkqaq.configui.core.layout.UiRow.Alignment.END)
+            .footer(Ui.row().mainAxisAlignment(UiMainAxisAlignment.END)
                 .add(Ui.button(UiText.literal("Done"), () -> { })));
 
         scaffold.measure(renderer, 240, 260, UiTheme.roseLight());
