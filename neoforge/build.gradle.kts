@@ -1,10 +1,27 @@
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.jvm.tasks.Jar
+import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.kotlin.dsl.withGroovyBuilder
 
 plugins {
     id("multiloader-loader")
     id("net.neoforged.moddev") version "2.0.143"
+}
+
+apply(plugin = "dev.kikugie.fletching-table.neoforge")
+
+val accessWidener = rootProject.file(
+    "common/src/main/resources/accesswideners/${commonMod.mc}-${commonMod.id}.accesswidener"
+)
+check(accessWidener.isFile) { "Missing Access Widener: ${accessWidener.path}" }
+
+extensions.getByName("fletchingTable").withGroovyBuilder {
+    "accessConverter" {
+        "register"("main") {
+            "add"(accessWidener.absolutePath)
+        }
+    }
 }
 
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
@@ -55,6 +72,7 @@ afterEvaluate {
 
 neoForge {
     version = commonMod.dep("neoforge")
+    accessTransformers.from(project.file("build/resources/main/META-INF/accesstransformer.cfg"))
     if (!commonMod.unobfuscated && !providers.gradleProperty("skipOptionalDependencies").isPresent) {
         commonMod.depOrNull("parchment")?.let { parchmentVersion ->
             parchment {
@@ -83,4 +101,20 @@ neoForge {
     mods {
         register(commonMod.id) { sourceSet(sourceSets.main.get()) }
     }
+}
+
+tasks.named<ProcessResources>("processResources") {
+    // Fletching Table omits an output file when an AW contains only its
+    // header. NeoForm still expects the configured AT path to exist.
+    doLast {
+        val atFile = destinationDir.resolve("META-INF/accesstransformer.cfg")
+        if (!atFile.exists()) {
+            atFile.parentFile.mkdirs()
+            atFile.writeText("# Generated from the versioned access widener.\n")
+        }
+    }
+}
+
+tasks.named("createMinecraftArtifacts") {
+    dependsOn(tasks.named("processResources"))
 }

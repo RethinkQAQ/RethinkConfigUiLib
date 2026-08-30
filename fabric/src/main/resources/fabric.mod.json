@@ -12,6 +12,7 @@
   },
   "license": "${modLicense}",
   "environment": "client",
+  "accessWidener": "${modId}.accesswidener",
   "custom": {
     "modmenu": {
       "badges": ["library"],
@@ -19,7 +20,7 @@
     }
   },
   "entrypoints": { "client": ["com.rethinkqaq.configui.fabric.RethinkConfigUiLibFabric"] },
-  "mixins": ["rethink_config_ui_lib.fabric.mixins.json"],
+  "mixins": ["rethink_config_ui_lib.mixins.json", "rethink_config_ui_lib.fabric.mixins.json"],
   "depends": {
     "fabricloader": ">=${fabricLoaderMinVersion}",
     "minecraft": "${minecraftVersionRangeFabric}",

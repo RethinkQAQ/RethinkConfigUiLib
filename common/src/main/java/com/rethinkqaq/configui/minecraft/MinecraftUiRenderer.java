@@ -145,9 +145,30 @@ public final class MinecraftUiRenderer implements UiRenderer {
         graphics.pose().popPose();
         //?}
     }
+
     @Override public float textWidth(UiText text, float scale) { return textWidth(text) * scale; }
     @Override public float lineHeight(float scale) { return lineHeight() * scale; }
     @Override public float lineHeight() { return font.lineHeight; }
+    @Override public void pushOverlay() {
+        // Legacy GuiGraphics still uses the pose Z coordinate for ordering. Keep
+        // tooltips above item/model batches without changing ordinary component
+        // coordinates. Modern GuiGraphics uses global strata instead of a 3D
+        // pose; create one only for the host's top-level tooltip pass. This is
+        // deliberately not exposed to ordinary components.
+        //? if >=1.21.6 {
+        /*graphics.nextStratum();
+        *///?} else {
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 1000);
+        //?}
+    }
+    @Override public void popOverlay() {
+        //? if >=1.21.6 {
+        /*graphics.pose().popMatrix();
+        *///?} else {
+        graphics.pose().popPose();
+        //?}
+    }
     @Override public void pushClip(UiBounds box) {
         UiBounds effective = clipStack.isEmpty() ? box : clipStack.peek().intersection(box);
         clipStack.push(effective);

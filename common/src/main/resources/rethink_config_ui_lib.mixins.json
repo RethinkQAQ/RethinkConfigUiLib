@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "${mixinCompatibilityLevel}",
+  "package": "com.rethinkqaq.configui.mixin",
+  "refmap": "${modId}.refmap.json",
+  "mixins": [],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1 }
+}

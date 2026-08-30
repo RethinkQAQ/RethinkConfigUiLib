@@ -689,20 +689,25 @@ public final class UiHost {
         if (y + height > screenHeight - screenMargin) y = mouseY - height - 12;
         y = Math.max(screenMargin, Math.min(y, screenHeight - screenMargin - height));
         com.rethinkqaq.configui.core.UiBounds bounds = new com.rethinkqaq.configui.core.UiBounds(x, y, width, height);
-        renderer.fillRoundRect(bounds, theme.metrics().radius(), theme.palette().control());
-        renderer.strokeRoundRect(bounds, theme.metrics().radius(), Math.min(1, theme.metrics().borderWidth()), theme.palette().border());
-        if (content != null) {
-            com.rethinkqaq.configui.core.UiBounds contentBounds = bounds.inset(padding);
-            content.layout(renderer, contentBounds, theme);
-            renderer.pushClip(contentBounds);
-            content.render(renderer, theme);
-            renderer.popClip();
-        } else if (!lines.isEmpty()) {
-            float lineHeight = renderer.lineHeight() + tooltip.lineGap();
-            for (int index = 0; index < lines.size(); index++) {
-                renderer.drawText(lines.get(index), x + padding,
-                    y + padding + index * lineHeight, theme.palette().onAccent());
+        renderer.pushOverlay();
+        try {
+            renderer.fillRoundRect(bounds, theme.metrics().radius(), theme.palette().control());
+            renderer.strokeRoundRect(bounds, theme.metrics().radius(), Math.min(1, theme.metrics().borderWidth()), theme.palette().border());
+            if (content != null) {
+                com.rethinkqaq.configui.core.UiBounds contentBounds = bounds.inset(padding);
+                content.layout(renderer, contentBounds, theme);
+                renderer.pushClip(contentBounds);
+                content.render(renderer, theme);
+                renderer.popClip();
+            } else if (!lines.isEmpty()) {
+                float lineHeight = renderer.lineHeight() + tooltip.lineGap();
+                for (int index = 0; index < lines.size(); index++) {
+                    renderer.drawText(lines.get(index), x + padding,
+                        y + padding + index * lineHeight, theme.palette().onAccent());
+                }
             }
+        } finally {
+            renderer.popOverlay();
         }
     }
     private void focusAt(float x, float y) { setFocus(findFocusableAt(root, x, y, viewportBounds())); }

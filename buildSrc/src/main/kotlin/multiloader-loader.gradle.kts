@@ -39,5 +39,7 @@ tasks.compileJava {
     setSource(files(generatedPlatformJava, commonJava))
 }
 tasks.processResources {
-    from(commonResources)
+    from(commonResources) {
+        exclude("accesswideners/**")
+    }
 }

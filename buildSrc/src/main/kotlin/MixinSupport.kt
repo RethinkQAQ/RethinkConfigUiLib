@@ -1,4 +1,5 @@
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSet
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
@@ -7,6 +8,22 @@ private const val MIXIN_VERSION = "0.8.5"
 private const val MIXIN_EXTRAS_VERSION = "0.5.4"
 
 enum class MixinTarget { COMMON, FABRIC, FORGE, NEOFORGE }
+
+class MixinExtension {
+    internal val configs = mutableListOf<String>()
+    fun config(name: String) { configs += name }
+    fun add(sourceSet: SourceSet, refmap: String) {
+        require(refmap.endsWith(".json"))
+    }
+}
+fun Project.mixin(configure: MixinExtension.() -> Unit) {
+    val extension = MixinExtension().apply(configure)
+    extensions.add("mixin", extension)
+    tasks.matching { it.name == "jar" }.configureEach {
+        if (extension.configs.isNotEmpty())
+            (this as org.gradle.api.tasks.bundling.Jar).manifest.attributes["MixinConfigs"] = extension.configs.joinToString(",")
+    }
+}
 
 fun Project.configureMixinSupport(target: MixinTarget) {
     if (target == MixinTarget.COMMON) {
@@ -27,12 +44,17 @@ fun Project.configureMixinSupport(target: MixinTarget) {
             dependencies.add("include", dependency)
         }
         MixinTarget.FORGE -> {
-            dependencies.add("implementation", "io.github.llamalad7:mixinextras-forge:$MIXIN_EXTRAS_VERSION")
-            dependencies.add("jarJar", "io.github.llamalad7:mixinextras-forge:$MIXIN_EXTRAS_VERSION")
+            val minor = commonMod.mc.split('.').getOrNull(1)?.toIntOrNull() ?: 0
+            if (minor >= 17) {
+                dependencies.add("implementation", "io.github.llamalad7:mixinextras-forge:$MIXIN_EXTRAS_VERSION")
+                if (configurations.findByName("jarJar") != null) {
+                    dependencies.add("jarJar", "io.github.llamalad7:mixinextras-forge:$MIXIN_EXTRAS_VERSION")
+                }
+            }
         }
         else -> Unit
     }
-    if (target == MixinTarget.FORGE || target == MixinTarget.NEOFORGE || commonMod.unobfuscated) {
+    if (target == MixinTarget.NEOFORGE || commonMod.unobfuscated) {
         configureEmptyRefmap()
     }
 }

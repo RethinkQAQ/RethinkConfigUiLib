@@ -57,6 +57,20 @@ import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 *///?}
+//? if >=1.21.5 && <1.21.6 {
+/*import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import java.util.HashMap;
+import java.util.Map;
+import net.minecraft.client.renderer.RenderType;
+*///?}
 //? if >=1.21.6 && <26.2 {
 /*import com.mojang.blaze3d.shaders.UniformType;
 *///?}
@@ -193,6 +207,24 @@ final class MinecraftSdfRenderer {
     private static void warn(Exception exception) {
         if (!warned) { warned = true; RethinkConfigUiLib.LOGGER.warn("RCUI SDF renderer could not initialize; using the safe rounded fallback: {}", exception.toString()); }
     }
+    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
+        if (box.width() <= 0 || box.height() <= 0) return true;
+        try {
+            CompiledShaderProgram active = Minecraft.getInstance().getShaderManager().getProgramForLoading(PROGRAM);
+            if (active == null) {
+                warn(new IllegalStateException("RCUI SDF shader program was not loaded: rethink_config_ui_lib:core/rcui_sdf"));
+                return false;
+            }
+            double scale = Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale;
+            active.getUniform("SdfBounds").set((float) (box.x() * scale), (float) (Minecraft.getInstance().getWindow().getHeight() - (box.y() + box.height()) * scale), (float) (box.width() * scale), (float) (box.height() * scale));
+            active.getUniform("SdfStyle").set(radius * (float) scale, stroke * (float) scale, outline ? 1f : 0f, 0f);
+            RenderSystem.enableBlend(); RenderSystem.defaultBlendFunc(); RenderSystem.setShader(active);
+            int a = color >>> 24 & 255, r = color >>> 16 & 255, g = color >>> 8 & 255, b = color & 255;
+            BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+            buffer.addVertex(graphics.pose().last().pose(), box.x(), box.y(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x(), box.y() + box.height(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x() + box.width(), box.y() + box.height(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x() + box.width(), box.y(), 0).setColor(r, g, b, a);
+            BufferUploader.drawWithShader(buffer.buildOrThrow()); RenderSystem.disableBlend(); return true;
+        } catch (Exception exception) { warn(exception); return false; }
+    }
     *///?}
 
     //? if <1.21.1 {
@@ -227,27 +259,40 @@ final class MinecraftSdfRenderer {
     }
     //?}
 
-    //? if >=1.21.3 && <1.21.5 {
-    /*private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
-        if (box.width() <= 0 || box.height() <= 0) return true;
-        try {
-            CompiledShaderProgram active = Minecraft.getInstance().getShaderManager().getProgramForLoading(PROGRAM);
-            double scale = Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale;
-            active.getUniform("SdfBounds").set((float) (box.x() * scale), (float) (Minecraft.getInstance().getWindow().getHeight() - (box.y() + box.height()) * scale), (float) (box.width() * scale), (float) (box.height() * scale));
-            active.getUniform("SdfStyle").set(radius * (float) scale, stroke * (float) scale, outline ? 1f : 0f, 0f);
-            RenderSystem.enableBlend(); RenderSystem.defaultBlendFunc(); RenderSystem.setShader(active);
-            int a = color >>> 24 & 255, r = color >>> 16 & 255, g = color >>> 8 & 255, b = color & 255;
-            BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-            buffer.addVertex(graphics.pose().last().pose(), box.x(), box.y(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x(), box.y() + box.height(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x() + box.width(), box.y() + box.height(), 0).setColor(r, g, b, a); buffer.addVertex(graphics.pose().last().pose(), box.x() + box.width(), box.y(), 0).setColor(r, g, b, a);
-            BufferUploader.drawWithShader(buffer.buildOrThrow()); RenderSystem.disableBlend(); return true;
-        } catch (Exception exception) { warn(exception); return false; }
-    }
-    *///?}
-
     //? if >=1.21.5 && <1.21.6 {
-    /*static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return false; }
-    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return false; }
-    static void invalidate() { }
+    
+    /*private static final Map<String, RenderType> TYPES = new HashMap<>();
+    private static RenderType type(float radius, float stroke, boolean outline, float coordinateScale) {
+        int r = Math.round(radius * (float) (Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale));
+        int s = Math.round(stroke * (float) (Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale));
+        String key = r + ":" + s + ":" + outline;
+        return TYPES.computeIfAbsent(key, ignored -> {
+            RenderPipeline pipeline = RenderPipeline.builder()
+                .withLocation(ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + key.replace(':', '_')))
+                .withVertexShader(ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_legacy"))
+                .withFragmentShader(ResourceLocation.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_legacy"))
+                .withUniform("ModelViewMat", UniformType.MATRIX4X4)
+                .withUniform("ProjMat", UniformType.MATRIX4X4)
+                .withUniform("ColorModulator", UniformType.VEC4)
+                .withShaderDefine("RCUI_RADIUS", r)
+                .withShaderDefine("RCUI_STROKE", s)
+                .withShaderDefine("RCUI_STROKE_MODE", outline ? 1 : 0)
+                .withBlend(BlendFunction.TRANSLUCENT)
+                .withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false).withCull(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS).build();
+            return RenderType.create("rcui_sdf_" + key, 256, pipeline,
+                RenderType.CompositeState.builder().createCompositeState(false));
+        });
+    }
+    static boolean fill(GuiGraphics graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphics graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphics graphics, UiBounds box, float radius, float width, int color, boolean outline, float coordinateScale) {
+        if (box.width() <= 0 || box.height() <= 0) return true;
+        graphics.fill(type(radius, width, outline, coordinateScale), Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+        return true;
+    }
+    static void invalidate() { TYPES.clear(); }
     *///?}
 
     //? if >=1.21.6 {

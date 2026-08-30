@@ -9,6 +9,17 @@ dependencies {
     compileOnly(project(":core"))
 }
 
+configureMixinSupport(MixinTarget.COMMON)
+
+val accessWidener = rootProject.file(
+    "common/src/main/resources/accesswideners/${commonMod.mc}-${commonMod.id}.accesswidener"
+)
+check(accessWidener.isFile) { "Missing Access Widener: ${accessWidener.path}" }
+
+loom {
+    accessWidenerPath.set(accessWidener)
+}
+
 stonecutter {
     // Minecraft switched the vanilla logging API from Log4j2 to SLF4J in 1.18.2.
     // Keep shared sources on the modern API and rewrite them for older nodes.

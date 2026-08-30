@@ -1,6 +1,6 @@
 {
-  "vertex": "rethink_config_ui_lib:rcui_sdf",
-  "fragment": "rethink_config_ui_lib:rcui_sdf",
+  "vertex": "rethink_config_ui_lib:core/rcui_sdf",
+  "fragment": "rethink_config_ui_lib:core/rcui_sdf",
   "samplers": [],
   "uniforms": [
     { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0] },

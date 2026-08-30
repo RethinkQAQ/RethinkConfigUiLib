@@ -10,6 +10,10 @@ plugins {
 }
 
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
+val accessWidener = rootProject.file(
+    "common/src/main/resources/accesswideners/${commonMod.mc}-${commonMod.id}.accesswidener"
+)
+check(accessWidener.isFile) { "Missing Access Widener: ${accessWidener.path}" }
 val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
 val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 val configResources = project(":config").layout.buildDirectory.dir("resources/main")
@@ -63,6 +67,16 @@ tasks.withType<RemapJarTask>().configureEach {
         exclude("META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.processResources {
+    from(accessWidener) {
+        rename { "${commonMod.id}.accesswidener" }
+    }
+}
+
+loom {
+    accessWidenerPath.set(accessWidener)
 }
 
 if (!commonMod.unobfuscated) {

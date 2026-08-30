@@ -48,13 +48,12 @@ check(supportedVersions.isNotEmpty()) { "stonecutter_enabled_versions must conta
 check(supportedVersions.size == supportedVersions.toSet().size) {
     "stonecutter_enabled_versions contains duplicate versions"
 }
-val configuredVcsVersion = providers.gradleProperty("stonecutter_vcs_version")
-    .orNull
-    ?.trim()
-    ?.takeIf(String::isNotEmpty)
-val activeVcsVersion = configuredVcsVersion ?: supportedVersions.first()
-check(activeVcsVersion in supportedVersions) {
-    "stonecutter_vcs_version=$activeVcsVersion must also be listed in stonecutter_enabled_versions"
+// Keep the Stonecutter VCS baseline in the settings model rather than in
+// gradle.properties. This value describes the checked-out development branch,
+// so putting it in version properties makes switching version nodes fragile.
+val vcsBaselineVersion = "1.21.1"
+check(vcsBaselineVersion in supportedVersions) {
+    "The VCS baseline $vcsBaselineVersion must be listed in stonecutter_enabled_versions"
 }
 check(supportedVersions.all { version ->
     val core = version.substringBefore('-')
@@ -91,7 +90,7 @@ stonecutter {
 
     create(rootProject) {
         versions(*supportedVersions.toTypedArray())
-        vcsVersion = activeVcsVersion
+        vcsVersion = vcsBaselineVersion
         branch("common") { versions(*supportedVersions.toTypedArray()) }
         platformVersions.forEach { (platform, versions) ->
             if (versions.isNotEmpty()) {
@@ -207,10 +206,12 @@ gradle.projectsLoaded {
 
             platforms.forEach { platform ->
                 val candidate = rootProject.project(":$platform:$minecraftVersion")
-                val sourceName = if (platform == "forge" && minecraftVersion in setOf("1.20.1", "1.20.4")) {
-                    "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-slim-all.jar"
-                } else {
-                    "$artifactBase-$buildVersion-mc$minecraftVersion-$platform.jar"
+                val sourceName = when {
+                    platform == "forge" && minecraftVersion in setOf("1.20.1", "1.20.4") ->
+                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-slim-all.jar"
+                    platform == "forge" ->
+                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-all.jar"
+                    else -> "$artifactBase-$buildVersion-mc$minecraftVersion-$platform.jar"
                 }
                 from(rootProject.zipTree(candidate.layout.buildDirectory.file("libs/$sourceName")))
             }

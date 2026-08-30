@@ -36,6 +36,10 @@ public interface UiRenderer {
     default float textWidth(UiText text, float scale) { return textWidth(text) * scale; }
     float lineHeight();
     default float lineHeight(float scale) { return lineHeight() * scale; }
+    /** Enters the platform's top-most ordinary UI overlay layer. */
+    default void pushOverlay() { }
+    /** Leaves the platform's top-most ordinary UI overlay layer. */
+    default void popOverlay() { }
     void pushClip(UiBounds bounds);
     void popClip();
 }
