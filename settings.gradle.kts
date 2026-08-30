@@ -172,15 +172,6 @@ gradle.projectsLoaded {
                 from(candidate.layout.buildDirectory.dir("libs")) {
                     include("*.jar")
                     exclude("*-sources.jar", "*-javadoc.jar", "*-dev.jar", "*-slim.jar")
-                    // Forge's legacy remapper emits the final production jar
-                    // as -slim-all; publish it with the normal mod filename.
-                    rename { name ->
-                        if (name.endsWith("-slim-all.jar")) {
-                            name.removeSuffix("-slim-all.jar") + ".jar"
-                        } else {
-                            name
-                        }
-                    }
                 }
             }
         }
@@ -208,7 +199,7 @@ gradle.projectsLoaded {
                 val candidate = rootProject.project(":$platform:$minecraftVersion")
                 val sourceName = when {
                     platform == "forge" && minecraftVersion in setOf("1.20.1", "1.20.4") ->
-                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-slim-all.jar"
+                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-all-all.jar"
                     platform == "forge" ->
                         "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-all.jar"
                     else -> "$artifactBase-$buildVersion-mc$minecraftVersion-$platform.jar"

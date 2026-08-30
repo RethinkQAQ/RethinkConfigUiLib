@@ -196,7 +196,7 @@ afterEvaluate {
 }
 
 tasks.jar {
-    archiveClassifier = "slim"
+    archiveClassifier.set("")
     duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 

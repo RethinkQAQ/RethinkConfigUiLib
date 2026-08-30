@@ -69,12 +69,9 @@ jobs:
                   raise SystemExit(f'Platform jar found in universal output: {jar.name}')
               if any(token in jar.name for token in ('-sources.jar', '-javadoc.jar', '-dev.jar')):
                   raise SystemExit(f'Non-release jar found in universal output: {jar.name}')
-              published_name = jar.name
-              if published_name.endswith('-slim-all.jar'):
-                  published_name = published_name[:-len('-slim-all.jar')] + '.jar'
-              elif published_name.endswith('-slim.jar'):
-                  published_name = published_name[:-len('-slim.jar')] + '.jar'
-              (combined / published_name).write_bytes(jar.read_bytes())
+              if '-slim' in jar.name:
+                  raise SystemExit(f'Non-release slim jar found in universal output: {jar.name}')
+              (combined / jar.name).write_bytes(jar.read_bytes())
           PY
 
       - name: Upload commit artifact
