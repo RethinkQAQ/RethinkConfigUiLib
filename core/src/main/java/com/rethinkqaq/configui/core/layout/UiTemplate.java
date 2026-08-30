@@ -118,7 +118,9 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         private float regionGap = -1;
         private boolean scrollContent = true;
         private FooterAlignment footerAlignment = FooterAlignment.END;
-        private boolean footerDivider = true;
+        // The footer is separated by layout and surface contrast by default. Consumers can
+        // opt into an explicit divider with footerDivider(true).
+        private boolean footerDivider = false;
 
         private Builder(UiTemplateLayout layout) { this.layout = Objects.requireNonNull(layout, "layout"); }
 
@@ -198,7 +200,6 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         private final FooterAlignment alignment;
         private final boolean divider;
         private static final float DIVIDER_HEIGHT = 1;
-        private static final float DIVIDER_GAP = 6;
 
         private FooterNode(Ui.Node child, FooterAlignment alignment, boolean divider) {
             this.child = child;
@@ -209,14 +210,15 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         @Override public List<Ui.Node> childNodes() { return List.of(child); }
 
         @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-            child.measure(renderer, maxWidth, Math.max(0, maxHeight - (divider ? DIVIDER_HEIGHT + DIVIDER_GAP : 0)), theme);
+            float dividerGap = dividerGap(theme);
+            child.measure(renderer, maxWidth, Math.max(0, maxHeight - (divider ? DIVIDER_HEIGHT + dividerGap : 0)), theme);
             measuredWidth = maxWidth;
-            measuredHeight = Math.min(maxHeight, child.measuredHeight() + (divider ? DIVIDER_HEIGHT + DIVIDER_GAP : 0));
+            measuredHeight = Math.min(maxHeight, child.measuredHeight() + (divider ? DIVIDER_HEIGHT + dividerGap : 0));
         }
 
         @Override public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
             super.layout(renderer, value, theme);
-            float top = value.y() + (divider ? DIVIDER_HEIGHT + DIVIDER_GAP : 0);
+            float top = value.y() + (divider ? DIVIDER_HEIGHT + dividerGap(theme) : 0);
             float width = alignment == FooterAlignment.SPACE_BETWEEN && child instanceof UiRow
                 ? value.width() : child.measuredWidth();
             if (child instanceof UiRow row && alignment == FooterAlignment.SPACE_BETWEEN
@@ -245,6 +247,10 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         @Override public boolean key(int keyCode) { return child.key(keyCode); }
         @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) { return child.key(event, clipboard); }
         @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) { return child.textInput(event, clipboard); }
+
+        private static float dividerGap(UiTheme theme) {
+            return Math.max(1, theme.metrics().spacing() * .65f);
+        }
 
         private static int withAlpha(int color, int alpha) { return (Math.max(0, Math.min(255, alpha)) << 24) | (color & 0x00FFFFFF); }
     }

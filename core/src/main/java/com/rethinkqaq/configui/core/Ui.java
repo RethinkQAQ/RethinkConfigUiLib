@@ -109,8 +109,19 @@ public final class Ui {
         renderer.drawText(fitted(renderer, text, maxWidth), x, y, color);
     }
 
+    /** Draws fitted text using an explicit renderer scale. */
+    public static void drawFittedText(UiRenderer renderer, UiText text, float x, float y, float maxWidth, int color, float scale) {
+        if (maxWidth <= 0 || scale <= 0) return;
+        renderer.drawText(fitted(renderer, text, maxWidth / scale), x, y, color, scale);
+    }
+
     /** Returns a renderer-measured text value that fits within the requested width. */
     public static UiText fitText(UiRenderer renderer, UiText text, float maxWidth) { return fitted(renderer, text, maxWidth); }
+
+    /** Fits text using the same scale that will be used for drawing it. */
+    public static UiText fitText(UiRenderer renderer, UiText text, float maxWidth, float scale) {
+        return fitted(renderer, text, maxWidth / Math.max(.0001f, scale));
+    }
 
     /** Splits literal text into renderer-measured lines without allowing a line to overflow. */
     public static List<UiText> wrapLines(UiRenderer renderer, UiText text, float maxWidth, int maxLines) {

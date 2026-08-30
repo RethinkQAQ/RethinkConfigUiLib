@@ -192,6 +192,24 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
          * comfortable hit targets and breathing room around labels.
          */
         public static UiMetrics comfortable() { return new UiMetrics(10, 9, 12, 34, .5f, 13, 10, 0); }
+
+        /** Returns a size-adjusted copy while preserving the theme's visual language. */
+        public UiMetrics forDensity(UiDensity density) {
+            Objects.requireNonNull(density, "density");
+            float scale = density.scale();
+            return new UiMetrics(
+                radius * scale,
+                spacing * scale,
+                padding * scale,
+                // Keep content controls usable in compact mode. Chrome is compressed through
+                // its own text/padding rules; a 17px input/button would be unreadable.
+                Math.max(24, controlHeight * scale),
+                Math.max(.5f, borderWidth * scale),
+                cardRadius * scale,
+                controlRadius * scale,
+                shadowOffset * scale
+            );
+        }
     }
 
     /** Motion durations. Renderers may ignore motion when animation is disabled by a host. */

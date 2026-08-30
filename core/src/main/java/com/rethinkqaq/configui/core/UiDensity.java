@@ -16,10 +16,17 @@
  * You should have received a copy of the GNU Lesser General Public License along
  * with Rethink Config UI Lib. If not, see <https://www.gnu.org/licenses/>.
  */
+package com.rethinkqaq.configui.core;
 
-package com.rethinkqaq.configui.utils;
+/** Layout density presets used by RCUI templates. */
+public enum UiDensity {
+    COMFORTABLE(1f),
+    NORMAL(.9f),
+    COMPACT(.5f);
 
-public final class Dummy {
-    private Dummy() {
-    }
+    private final float scale;
+
+    UiDensity(float scale) { this.scale = scale; }
+
+    public float scale() { return scale; }
 }

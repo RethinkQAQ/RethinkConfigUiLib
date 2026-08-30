@@ -256,5 +256,9 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.Cl
         return node.measuredHeight();
     }
     private float shellWidth(float availableWidth) { return maxContentWidth == 0 ? availableWidth : Math.min(availableWidth, maxContentWidth); }
-    private float gap(UiTheme theme) { return regionGap < 0 ? theme.metrics().spacing() : regionGap; }
+    private float gap(UiTheme theme) {
+        float density = theme.metrics().controlHeight() <= 24.01f ? .5f : Math.min(1f,
+            theme.metrics().controlHeight() / UiTheme.UiMetrics.comfortable().controlHeight());
+        return (regionGap < 0 ? theme.metrics().spacing() : regionGap) * density;
+    }
 }

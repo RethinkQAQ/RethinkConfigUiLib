@@ -26,6 +26,7 @@ import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 
 /** A responsive scaffold header with optional surface chrome. */
 public final class UiHeader extends Ui.Node {
@@ -115,12 +116,15 @@ public final class UiHeader extends Ui.Node {
             measuredHeight = 0;
             return;
         }
+        float densityScale = UiTextMetrics.scale(theme.metrics());
         float padding = padding(theme, resolvedStyle);
         float textWidth = Math.max(0, maxWidth - padding * 2);
-        float height = renderer.lineHeight(titleScale);
-        if (subtitle != null) height += titleGap + renderer.lineHeight(subtitleScale);
-        measuredWidth = Math.min(maxWidth, Math.max(renderer.textWidth(title, titleScale),
-            subtitle == null ? 0 : renderer.textWidth(subtitle, subtitleScale)) + padding * 2);
+        float effectiveTitleScale = titleScale * densityScale;
+        float effectiveSubtitleScale = subtitleScale * densityScale;
+        float height = renderer.lineHeight(effectiveTitleScale);
+        if (subtitle != null) height += titleGap * densityScale + renderer.lineHeight(effectiveSubtitleScale);
+        measuredWidth = Math.min(maxWidth, Math.max(renderer.textWidth(title, effectiveTitleScale),
+            subtitle == null ? 0 : renderer.textWidth(subtitle, effectiveSubtitleScale)) + padding * 2);
         measuredHeight = Math.min(maxHeight, height + padding * 2);
         if (textWidth <= 0) measuredWidth = Math.min(maxWidth, padding * 2);
     }
@@ -128,6 +132,7 @@ public final class UiHeader extends Ui.Node {
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
         if (resolvedStyle == UiHeaderStyle.NONE || bounds.width() <= 0 || bounds.height() <= 0) return;
+        float densityScale = UiTextMetrics.scale(theme.metrics());
         float padding = padding(theme, resolvedStyle);
         if (resolvedStyle != UiHeaderStyle.TEXT) {
             float radius = resolvedStyle == UiHeaderStyle.COMPACT
@@ -138,12 +143,14 @@ public final class UiHeader extends Ui.Node {
         float textWidth = Math.max(0, bounds.width() - padding * 2);
         float x = bounds.x() + padding;
         float y = bounds.y() + padding;
-        UiText fittedTitle = Ui.fitText(renderer, title, textWidth / titleScale);
-        renderer.drawText(fittedTitle, x, y, titleColor == null ? theme.palette().textPrimary() : titleColor, titleScale);
+        float effectiveTitleScale = titleScale * densityScale;
+        float effectiveSubtitleScale = subtitleScale * densityScale;
+        UiText fittedTitle = Ui.fitText(renderer, title, textWidth, effectiveTitleScale);
+        renderer.drawText(fittedTitle, x, y, titleColor == null ? theme.palette().textPrimary() : titleColor, effectiveTitleScale);
         if (subtitle != null) {
-            UiText fittedSubtitle = Ui.fitText(renderer, subtitle, textWidth / subtitleScale);
-            renderer.drawText(fittedSubtitle, x, y + renderer.lineHeight(titleScale) + titleGap,
-                subtitleColor == null ? theme.palette().textSecondary() : subtitleColor, subtitleScale);
+            UiText fittedSubtitle = Ui.fitText(renderer, subtitle, textWidth, effectiveSubtitleScale);
+            renderer.drawText(fittedSubtitle, x, y + renderer.lineHeight(effectiveTitleScale) + titleGap * densityScale,
+                subtitleColor == null ? theme.palette().textSecondary() : subtitleColor, effectiveSubtitleScale);
         }
     }
 
@@ -156,10 +163,12 @@ public final class UiHeader extends Ui.Node {
 
     private float padding(UiTheme theme, UiHeaderStyle value) {
         if (customPadding >= 0) return customPadding;
+        float compactScale = Math.min(1f, theme.metrics().controlHeight() /
+            UiTheme.UiMetrics.comfortable().controlHeight());
         return switch (value) {
-            case TEXT -> theme.metrics().padding() * .25f;
-            case COMPACT -> theme.metrics().padding() * .6f;
-            case CARD -> theme.metrics().padding();
+            case TEXT -> theme.metrics().padding() * .25f * compactScale;
+            case COMPACT -> theme.metrics().padding() * .6f * compactScale;
+            case CARD -> theme.metrics().padding() * compactScale;
             case NONE -> 0;
         };
     }

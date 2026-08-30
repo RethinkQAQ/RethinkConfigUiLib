@@ -37,7 +37,7 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         syncButtons();
-        buttonTheme = compactTheme(theme);
+        buttonTheme = theme;
         gap = buttonTheme.metrics().spacing();
         placements.clear();
         float x = 0, rowHeight = 0, totalHeight = 0;
@@ -125,21 +125,6 @@ public final class UiNavigationBar extends Ui.Node implements Ui.ChildProvider {
             buttons.add(Ui.button(host.pageTitle(index), () -> host.select(index)));
         }
         while (buttons.size() > host.pageCount()) buttons.remove(buttons.size() - 1);
-    }
-
-    /** Category tabs use a lighter footprint than ordinary action buttons. */
-    private static UiTheme compactTheme(UiTheme theme) {
-        UiTheme.UiMetrics metrics = theme.metrics();
-        UiTheme.UiMetrics compact = new UiTheme.UiMetrics(
-            Math.max(6, metrics.radius() * .8f),
-            Math.max(5, metrics.spacing() * .7f),
-            Math.max(7, metrics.padding() * .7f),
-            Math.max(26, metrics.controlHeight() * .82f),
-            metrics.borderWidth(),
-            Math.max(8, metrics.cardRadius() * .8f),
-            Math.max(7, metrics.controlRadius() * .8f),
-            metrics.shadowOffset());
-        return theme.withMetrics(compact);
     }
 
     private record Placement(int index, float x, float width, int row) { }

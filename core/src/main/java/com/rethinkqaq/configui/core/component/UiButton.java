@@ -27,6 +27,7 @@ import com.rethinkqaq.configui.core.UiKey;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 
 /** A semantic action button. */
 public class UiButton extends Ui.Node {
@@ -59,14 +60,16 @@ public class UiButton extends Ui.Node {
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+        float textScale = UiTextMetrics.buttonScale(theme.metrics());
         float naturalWidth = Math.max(theme.metrics().controlHeight() * 2,
-            renderer.textWidth(text) + theme.metrics().padding() * 3);
+            renderer.textWidth(text, textScale) + theme.metrics().padding() * 3);
         measuredWidth = Math.min(maxWidth, preferredWidth > 0 ? preferredWidth : naturalWidth);
         measuredHeight = theme.metrics().controlHeight();
     }
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
+        float textScale = UiTextMetrics.buttonScale(theme.metrics());
         Ui.ButtonVariant currentVariant = currentVariant();
         int color = color(theme);
         boolean unselected = currentVariant == Ui.ButtonVariant.SECONDARY || currentVariant == Ui.ButtonVariant.OUTLINE;
@@ -74,11 +77,11 @@ public class UiButton extends Ui.Node {
         int textColor = !accentHover && unselected && enabled()
             ? theme.palette().textPrimary() : theme.palette().onAccent();
         renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), color);
-        UiText displayed = Ui.fitText(renderer, text, Math.max(0, bounds.width() - theme.metrics().padding() * 2));
-        float x = bounds.x() + (bounds.width() - renderer.textWidth(displayed)) / 2;
+        UiText displayed = Ui.fitText(renderer, text, Math.max(0, bounds.width() - theme.metrics().padding() * 2), textScale);
+        float x = bounds.x() + (bounds.width() - renderer.textWidth(displayed, textScale)) / 2;
         Ui.drawFittedText(renderer, displayed, x,
-            bounds.y() + (bounds.height() - renderer.lineHeight()) / 2,
-            Math.max(0, bounds.x() + bounds.width() - theme.metrics().padding() - x), textColor);
+            bounds.y() + (bounds.height() - renderer.lineHeight(textScale)) / 2,
+            Math.max(0, bounds.x() + bounds.width() - theme.metrics().padding() - x), textColor, textScale);
         if (currentVariant == Ui.ButtonVariant.OUTLINE || currentVariant == Ui.ButtonVariant.SECONDARY) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
                 theme.metrics().borderWidth(), theme.palette().border());

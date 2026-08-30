@@ -22,6 +22,7 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiDialogHost;
+import com.rethinkqaq.configui.core.UiDensity;
 import com.rethinkqaq.configui.core.UiDebugSnapshot;
 import com.rethinkqaq.configui.core.UiKey;
 import com.rethinkqaq.configui.core.UiKeyEvent;
@@ -55,6 +56,8 @@ public final class UiHost {
     private final UiNotificationCenter notifications = new UiNotificationCenter();
     private final LayoutMode layoutMode;
     private UiScalePolicy scalePolicy = UiScalePolicy.minecraft();
+    private UiDensity density = UiDensity.COMFORTABLE;
+    private UiTheme effectiveTheme;
     private UiBackground background;
 
     public UiHost(Ui.Node root, UiTheme theme) {
@@ -81,6 +84,10 @@ public final class UiHost {
     }
 
     public UiTheme theme() { return theme; }
+    private UiTheme effectiveTheme() {
+        if (effectiveTheme == null) effectiveTheme = theme.withMetrics(theme.metrics().forDensity(density));
+        return effectiveTheme;
+    }
     public Ui.Node root() { return root; }
     /** Returns a laid-out tree snapshot for development diagnostics and host tooling. */
     public UiDebugSnapshot debugSnapshot() { return UiDebugSnapshot.of(root); }
@@ -103,6 +110,7 @@ public final class UiHost {
         return this;
     }
     public UiScalePolicy scalePolicy() { return scalePolicy; }
+    public UiDensity density() { return density; }
     /** Returns the current UI canvas transform for a Minecraft GUI Scale value. */
     public float contentScale(double minecraftGuiScale) { return scalePolicy.contentScale(minecraftGuiScale); }
     public void render(UiRenderer renderer, int screenWidth, int screenHeight, int mouseX, int mouseY) {
@@ -114,6 +122,13 @@ public final class UiHost {
      */
     public void render(UiRenderer renderer, int screenWidth, int screenHeight, double minecraftGuiScale, int mouseX, int mouseY) {
         this.renderer = renderer;
+        UiDensity nextDensity = scalePolicy.density(minecraftGuiScale);
+        if (density != nextDensity) {
+            density = nextDensity;
+            effectiveTheme = null;
+            layoutRevision = Long.MIN_VALUE;
+        }
+        UiTheme renderTheme = effectiveTheme();
         float contentScale = contentScale(minecraftGuiScale);
         int canvasWidth = Math.max(1, Math.round(screenWidth / contentScale));
         int canvasHeight = Math.max(1, Math.round(screenHeight / contentScale));
@@ -129,11 +144,11 @@ public final class UiHost {
             width = canvasWidth; height = canvasHeight;
             layoutRevision = currentRevision;
             float horizontalInset = layoutMode == LayoutMode.FULLSCREEN ? 12 : 20;
-            float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 12 : 20;
+            float verticalInset = layoutMode == LayoutMode.FULLSCREEN ? 6 : 20;
             float availableWidth = Math.max(0, canvasWidth - horizontalInset * 2);
             if (layoutMode == LayoutMode.CONTENT) availableWidth = Math.min(availableWidth, 540);
             float availableHeight = Math.max(0, canvasHeight - verticalInset * 2);
-            root.measure(renderer, availableWidth, availableHeight, theme);
+            root.measure(renderer, availableWidth, availableHeight, renderTheme);
             float contentWidth = Math.min(availableWidth, root.measuredWidth());
             float contentHeight = Math.min(availableHeight, root.measuredHeight());
             // FULLSCREEN is still a responsive shell, not a left-aligned canvas. When the
@@ -142,16 +157,16 @@ public final class UiHost {
             float contentX = (canvasWidth - contentWidth) / 2f;
             float contentY = verticalInset;
             root.layout(renderer, new com.rethinkqaq.configui.core.UiBounds(
-                contentX, contentY, contentWidth, contentHeight), theme);
+                contentX, contentY, contentWidth, contentHeight), renderTheme);
         }
         float canvasMouseX = mouseX;
         float canvasMouseY = mouseY;
         updateHovered(root, canvasMouseX, canvasMouseY);
         advanceMotion(root, System.nanoTime());
-        root.render(renderer, theme);
+        root.render(renderer, renderTheme);
         hoveredTooltip(root, canvasMouseX, canvasMouseY).ifPresent(tooltip -> renderTooltip(renderer, tooltip, canvasWidth, canvasHeight,
             Math.round(canvasMouseX), Math.round(canvasMouseY)));
-        notifications.render(renderer, canvasWidth, canvasHeight, theme);
+        notifications.render(renderer, canvasWidth, canvasHeight, renderTheme);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -208,12 +223,12 @@ public final class UiHost {
         clearDetachedInputState();
         if (root instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
             scroll(root, (float) mouseX, (float) mouseY, amount, viewportBounds());
-            if (renderer != null) root.layout(renderer, root.bounds(), theme);
+            if (renderer != null) root.layout(renderer, root.bounds(), effectiveTheme());
             clearDetachedInputState();
             return true;
         }
         boolean handled = scroll(root, (float) mouseX, (float) mouseY, amount, viewportBounds());
-        if (handled && renderer != null) root.layout(renderer, root.bounds(), theme);
+        if (handled && renderer != null) root.layout(renderer, root.bounds(), effectiveTheme());
         if (handled) clearDetachedInputState();
         return handled;
     }
@@ -316,7 +331,7 @@ public final class UiHost {
     }
     private void advanceMotion(Ui.Node node, long nowNanos) {
         if (node == null) return;
-        node.advanceMotion(nowNanos, theme);
+        node.advanceMotion(nowNanos, effectiveTheme());
         if (node instanceof Ui.Tooltip tooltip) advanceMotion(tooltip.child(), nowNanos);
         if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) advanceMotion(child, nowNanos);
         if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) advanceMotion(child, nowNanos);
@@ -645,7 +660,8 @@ public final class UiHost {
     }
     private void renderTooltip(UiRenderer renderer, Ui.Tooltip tooltip, int screenWidth, int screenHeight,
                                int mouseX, int mouseY) {
-        float padding = tooltip.padding(theme);
+        UiTheme effectiveTheme = effectiveTheme();
+        float padding = tooltip.padding(effectiveTheme);
         float screenMargin = 6;
         float maximum = Math.min(tooltip.maxWidth(), Math.max(1, screenWidth - screenMargin * 2));
         float width;
@@ -654,7 +670,7 @@ public final class UiHost {
         UiTooltipContent content = tooltip.content();
         if (content != null) {
             content.measure(renderer, Math.max(1, maximum - padding * 2),
-                Math.min(tooltip.maxHeight(), Math.max(1, screenHeight - screenMargin * 2 - padding * 2)), theme);
+            Math.min(tooltip.maxHeight(), Math.max(1, screenHeight - screenMargin * 2 - padding * 2)), effectiveTheme);
             width = Math.min(maximum, content.measuredWidth() + padding * 2);
             height = Math.min(tooltip.maxHeight(), content.measuredHeight() + padding * 2);
         } else {
@@ -691,19 +707,19 @@ public final class UiHost {
         com.rethinkqaq.configui.core.UiBounds bounds = new com.rethinkqaq.configui.core.UiBounds(x, y, width, height);
         renderer.pushOverlay();
         try {
-            renderer.fillRoundRect(bounds, theme.metrics().radius(), theme.palette().control());
-            renderer.strokeRoundRect(bounds, theme.metrics().radius(), Math.min(1, theme.metrics().borderWidth()), theme.palette().border());
+            renderer.fillRoundRect(bounds, effectiveTheme.metrics().radius(), effectiveTheme.palette().control());
+            renderer.strokeRoundRect(bounds, effectiveTheme.metrics().radius(), Math.min(1, effectiveTheme.metrics().borderWidth()), effectiveTheme.palette().border());
             if (content != null) {
                 com.rethinkqaq.configui.core.UiBounds contentBounds = bounds.inset(padding);
-                content.layout(renderer, contentBounds, theme);
+                content.layout(renderer, contentBounds, effectiveTheme);
                 renderer.pushClip(contentBounds);
-                content.render(renderer, theme);
+                content.render(renderer, effectiveTheme);
                 renderer.popClip();
             } else if (!lines.isEmpty()) {
                 float lineHeight = renderer.lineHeight() + tooltip.lineGap();
                 for (int index = 0; index < lines.size(); index++) {
                     renderer.drawText(lines.get(index), x + padding,
-                        y + padding + index * lineHeight, theme.palette().onAccent());
+                        y + padding + index * lineHeight, effectiveTheme.palette().onAccent());
                 }
             }
         } finally {
