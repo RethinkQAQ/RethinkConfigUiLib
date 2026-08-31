@@ -77,26 +77,27 @@ public class UiButton extends Ui.Node {
         int textColor = !accentHover && unselected && enabled()
             ? theme.palette().textPrimary() : theme.palette().onAccent();
         renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), color);
-        UiText displayed = Ui.fitText(renderer, text, Math.max(0, bounds.width() - theme.metrics().padding() * 2), textScale);
+        float textWidth = Math.max(0, bounds.width() - theme.metrics().padding() * 2);
+        UiText displayed = UiTextMetrics.fit(renderer, text, textWidth, textScale);
         float x = bounds.x() + (bounds.width() - renderer.textWidth(displayed, textScale)) / 2;
-        Ui.drawFittedText(renderer, displayed, x,
-            bounds.y() + (bounds.height() - renderer.lineHeight(textScale)) / 2,
-            Math.max(0, bounds.x() + bounds.width() - theme.metrics().padding() - x), textColor, textScale);
+        UiTextMetrics.draw(renderer, displayed, x,
+            bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, textScale)) / 2,
+            textWidth, textColor, textScale);
         if (currentVariant == Ui.ButtonVariant.OUTLINE || currentVariant == Ui.ButtonVariant.SECONDARY) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
                 theme.metrics().borderWidth(), theme.palette().border());
         }
         if (hasVisibleFocus(theme)) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(),
-                blend(theme.palette().border(), theme.palette().accent(), focusProgress() * .55f));
+                blend(theme.palette().border(), theme.palette().accent(), focusProgress() * theme.states().focusStrength()));
         }
     }
 
     private int color(UiTheme theme) {
         if (!enabled()) return theme.palette().controlDisabled();
         return switch (currentVariant()) {
-            case PRIMARY -> pressed ? blend(theme.palette().control(), 0xFF000000, .12f)
-                : blend(theme.palette().control(), theme.palette().surfaceRaised(), hoverProgress() * .12f);
+            case PRIMARY -> pressed ? blend(theme.palette().control(), 0xFF000000, theme.states().pressedStrength())
+                : blend(theme.palette().control(), theme.palette().surfaceRaised(), hoverProgress() * theme.states().hoverStrength());
             case SECONDARY, OUTLINE -> pressed ? theme.palette().border()
                 : blend(currentVariant() == Ui.ButtonVariant.OUTLINE ? theme.palette().surface() : theme.palette().surfaceRaised(),
                     theme.palette().accentHover(), hoverProgress());

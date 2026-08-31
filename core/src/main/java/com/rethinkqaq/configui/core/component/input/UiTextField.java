@@ -37,7 +37,7 @@ import java.util.function.Predicate;
 public class UiTextField extends Ui.Node {
     private final UiBinding<String> binding;
     private String draft;
-    private String placeholder = "";
+    private UiText placeholder = UiText.literal("");
     private int maxLength = 256;
     private Predicate<String> characterFilter = value -> true;
     private java.util.function.Function<String, UiValidationResult> validator = value -> UiValidationResult.OK;
@@ -52,7 +52,7 @@ public class UiTextField extends Ui.Node {
         this.binding = Objects.requireNonNull(binding, "binding");
         draft = safe(binding.get()); cursor = draft.length(); selection = cursor;
     }
-    public UiTextField placeholder(UiText value) { placeholder = Objects.requireNonNull(value, "value").value(); return this; }
+    public UiTextField placeholder(UiText value) { placeholder = Objects.requireNonNull(value, "value"); return this; }
     public UiTextField maxLength(int value) { if (value < 0) throw new IllegalArgumentException("maxLength"); maxLength = value; trimToLength(); return this; }
     public UiTextField filter(Predicate<String> value) { characterFilter = Objects.requireNonNull(value, "value"); return this; }
     public UiTextField validator(java.util.function.Function<String, UiValidationResult> value) { validator = Objects.requireNonNull(value, "value"); validateDraft(); return this; }
@@ -88,12 +88,12 @@ public class UiTextField extends Ui.Node {
         int border = validation.severity() == UiValidationResult.Severity.ERROR ? theme.palette().danger()
             : validation.severity() == UiValidationResult.Severity.WARNING ? theme.palette().warning() : theme.palette().border();
         renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(), border);
-        String shown = draft.isEmpty() && !focused() ? placeholder : draft;
+        UiText shown = draft.isEmpty() && !focused() ? placeholder : UiText.literal(draft);
         int color = draft.isEmpty() && !focused() ? theme.palette().textSecondary()
             : enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         float x = bounds.x() + theme.metrics().padding() / 2f;
         float y = bounds.y() + (bounds.height() - renderer.lineHeight()) / 2f;
-        Ui.drawFittedText(renderer, UiText.literal(shown), x, y, Math.max(0, bounds.width() - theme.metrics().padding()), color);
+        Ui.drawFittedText(renderer, shown, x, y, Math.max(0, bounds.width() - theme.metrics().padding()), color);
         if (focused() && enabled()) {
             int safeCursor = Math.min(cursor, draft.length());
             float cursorX = x + renderer.textWidth(UiText.literal(draft.substring(0, safeCursor)));

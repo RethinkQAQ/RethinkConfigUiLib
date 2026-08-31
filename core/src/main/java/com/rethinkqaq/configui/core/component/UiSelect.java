@@ -27,6 +27,7 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBinding;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.UiKey;
 
@@ -64,12 +65,13 @@ public class UiSelect<T> extends Ui.Node {
         int textColor = enabled() ? theme.palette().onAccent() : theme.palette().textDisabled();
         float innerWidth = Math.max(0, bounds.width() - theme.metrics().padding() * 2);
         float half = innerWidth * .5f;
-        Ui.drawFittedText(renderer, text, bounds.x() + theme.metrics().padding(),
-            bounds.y() + (bounds.height() - renderer.lineHeight()) / 2, half, textColor);
-        UiText selected = Ui.fitText(renderer, labels.apply(binding.get()), half);
-        Ui.drawFittedText(renderer, selected,
-            bounds.x() + bounds.width() - theme.metrics().padding() - renderer.textWidth(selected),
-            bounds.y() + (bounds.height() - renderer.lineHeight()) / 2, half, textColor);
+        float scale = UiTextMetrics.buttonScale(theme.metrics());
+        float y = bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, scale)) / 2;
+        UiTextMetrics.draw(renderer, text, bounds.x() + theme.metrics().padding(), y, half, textColor, scale);
+        UiText selected = UiTextMetrics.fit(renderer, labels.apply(binding.get()), half, scale);
+        UiTextMetrics.draw(renderer, selected,
+            bounds.x() + bounds.width() - theme.metrics().padding() - renderer.textWidth(selected, scale),
+            y, half, textColor, scale);
         if (hasVisibleFocus(theme)) renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
             theme.metrics().borderWidth(), blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
     }

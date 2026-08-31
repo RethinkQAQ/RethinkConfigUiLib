@@ -28,6 +28,7 @@ import com.rethinkqaq.configui.core.UiKeyEvent;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTextInput;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.component.input.UiTextField;
 import com.rethinkqaq.configui.core.layout.UiScrollView;
@@ -62,14 +63,16 @@ public final class UiCollectionEditor<T> extends Ui.Node {
     @Override public void render(UiRenderer renderer, UiTheme theme) {
         int surface = enabled() ? blend(theme.palette().surfaceRaised(), theme.palette().surface(), hoverProgress()) : theme.palette().controlDisabled();
         int text = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
+        float textScale = UiTextMetrics.buttonScale(theme.metrics());
+        float lineHeight = UiTextMetrics.lineHeight(renderer, textScale);
         renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), surface);
         renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(), theme.palette().border());
-        Ui.drawFittedText(renderer, title, bounds.x() + theme.metrics().padding(), bounds.y() + (bounds.height() - renderer.lineHeight()) / 2f,
-            Math.max(0, bounds.width() - theme.metrics().padding() * 4), text);
+        UiTextMetrics.draw(renderer, title, bounds.x() + theme.metrics().padding(), bounds.y() + (bounds.height() - lineHeight) / 2f,
+            Math.max(0, bounds.width() - theme.metrics().padding() * 4), text, textScale);
         UiText count = UiText.literal("[" + size() + "]  >");
-        float countWidth = renderer.textWidth(count);
-        renderer.drawText(count, bounds.x() + bounds.width() - theme.metrics().padding() - countWidth,
-            bounds.y() + (bounds.height() - renderer.lineHeight()) / 2f, text);
+        float countWidth = renderer.textWidth(count, textScale);
+        UiTextMetrics.draw(renderer, count, bounds.x() + bounds.width() - theme.metrics().padding() - countWidth,
+            bounds.y() + (bounds.height() - lineHeight) / 2f, countWidth, text, textScale);
     }
     @Override public boolean click(float x, float y, int button) {
         if (!enabled() || button != 0 || !bounds.contains(x, y)) return false;
@@ -139,13 +142,14 @@ public final class UiCollectionEditor<T> extends Ui.Node {
         @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
             float padding = theme.metrics().padding();
             float innerWidth = Math.max(0, maxWidth - padding * 2);
-            titleHeight = renderer.lineHeight();
+            float textScale = UiTextMetrics.bodyScale(theme.metrics());
+            titleHeight = UiTextMetrics.lineHeight(renderer, textScale);
             add.measure(renderer, innerWidth, maxHeight, theme);
             addWidth = add.measuredWidth();
             addEditor.measure(renderer, Math.max(0, innerWidth - addWidth - theme.metrics().spacing()), maxHeight, theme);
             done.measure(renderer, innerWidth, maxHeight, theme);
             footerHeight = done.measuredHeight();
-            float messageHeight = validation.severity() == UiValidationResult.Severity.OK ? 0 : renderer.lineHeight() + theme.metrics().spacing() / 2f;
+            float messageHeight = validation.severity() == UiValidationResult.Severity.OK ? 0 : titleHeight + theme.metrics().spacing() / 2f;
             float footerGap = theme.metrics().spacing();
             listInset = 0;
             float fixed = padding * 2 + titleHeight + theme.metrics().spacing() + Math.max(add.measuredHeight(), addEditor.measuredHeight())
@@ -166,7 +170,7 @@ public final class UiCollectionEditor<T> extends Ui.Node {
             addEditor.layout(renderer, new UiBounds(x, y + (addHeight - addEditor.measuredHeight()) / 2f, editorWidth, addEditor.measuredHeight()), theme);
             add.layout(renderer, new UiBounds(x + editorWidth + theme.metrics().spacing(), y + (addHeight - add.measuredHeight()) / 2f, addWidth, add.measuredHeight()), theme);
             y += addHeight;
-            if (validation.severity() != UiValidationResult.Severity.OK) y += renderer.lineHeight() + theme.metrics().spacing() / 2f;
+            if (validation.severity() != UiValidationResult.Severity.OK) y += titleHeight + theme.metrics().spacing() / 2f;
             y += theme.metrics().spacing();
             list.layout(renderer, new UiBounds(x, y, width, Math.max(0, bodyHeight - listInset)), theme);
             float doneY = value.y() + value.height() - padding - footerHeight + theme.metrics().spacing() / 2f;
@@ -176,13 +180,15 @@ public final class UiCollectionEditor<T> extends Ui.Node {
             renderer.fillRoundRect(bounds, theme.metrics().cardRadius(), theme.palette().surfaceRaised());
             renderer.strokeRoundRect(bounds, theme.metrics().cardRadius(), theme.metrics().borderWidth(), theme.palette().border());
             float padding = theme.metrics().padding();
-            renderer.drawText(title, bounds.x() + padding, bounds.y() + padding, theme.palette().textPrimary());
+            float textScale = UiTextMetrics.bodyScale(theme.metrics());
+            UiTextMetrics.draw(renderer, title, bounds.x() + padding, bounds.y() + padding,
+                Math.max(0, bounds.width() - padding * 2), theme.palette().textPrimary(), textScale);
             addEditor.render(renderer, theme);
             add.render(renderer, theme);
             if (validation.severity() != UiValidationResult.Severity.OK) {
                 int color = validation.severity() == UiValidationResult.Severity.ERROR ? theme.palette().danger() : theme.palette().warning();
-                Ui.drawFittedText(renderer, validation.message(), bounds.x() + padding, add.bounds().y() + add.bounds().height() + theme.metrics().spacing() / 2f,
-                    Math.max(0, bounds.width() - padding * 2), color);
+                UiTextMetrics.draw(renderer, validation.message(), bounds.x() + padding, add.bounds().y() + add.bounds().height() + theme.metrics().spacing() / 2f,
+                    Math.max(0, bounds.width() - padding * 2), color, textScale);
             }
             list.render(renderer, theme);
             done.render(renderer, theme);

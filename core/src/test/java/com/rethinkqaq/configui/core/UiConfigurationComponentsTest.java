@@ -21,6 +21,7 @@ package com.rethinkqaq.configui.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.rethinkqaq.configui.core.component.data.UiSelectionList;
@@ -287,6 +288,29 @@ class UiConfigurationComponentsTest {
         UiHeader header = UiHeader.card(UiText.literal("Title")).responsive(true);
         header.measure(RENDERER, 400, 200, UiTheme.roseLight());
         assertEquals(UiHeaderStyle.TEXT, header.resolvedStyle());
+    }
+
+    @Test
+    void semanticOpacityAndMixAreStable() {
+        assertEquals(0x00112233, UiColor.withOpacity(0x112233, 0f));
+        assertEquals(0x80112233, UiColor.withOpacity(0x112233, 0.5f));
+        assertEquals(0xFF112233, UiColor.withOpacity(0x112233, 1f));
+        assertEquals(0xFF808080, UiColor.mix(0xFF000000, 0xFFFFFFFF, 0.5f));
+        assertEquals(0x80112233, UiBackground.translucent(0x112233, 0.5f).color());
+        assertEquals(0xFF112233, UiBackground.opaqueRgb(0x112233).color());
+    }
+
+    @Test
+    void legacyArgbBackgroundRemainsCompatible() {
+        assertEquals(0x88112233, UiBackground.translucent(0x88112233).color());
+        assertEquals(0xFF112233, UiBackground.opaque(0x88112233).color());
+    }
+
+    @Test
+    void semanticColorUnitsRejectInvalidValues() {
+        assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, -0.01f));
+        assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, 1.01f));
+        assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, Float.NaN));
     }
 
     private static final UiRenderer RENDERER = new UiRenderer() {

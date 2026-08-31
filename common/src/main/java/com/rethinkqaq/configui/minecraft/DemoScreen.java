@@ -188,7 +188,7 @@ public final class DemoScreen extends UiScreen {
     private static Ui.Node previewPage(UiDialogHost dialogs) {
         AtomicReference<Integer> selected = new AtomicReference<>(0);
         UiGrid cards = Ui.grid().minimumColumnWidth(168).maximumColumnWidth(188).gap(12)
-            .mainAxisAlignment(com.rethinkqaq.configui.core.UiMainAxisAlignment.START);
+            .rowAlignment(com.rethinkqaq.configui.core.UiMainAxisAlignment.START);
         cards.add(previewCard("No action", "Card click only", selected, 0, null, null));
         cards.add(previewCard("One action", "One full-width action", selected, 1,
             Ui.button(UiText.literal("Select"), () -> selected.set(1)), null));

@@ -25,6 +25,7 @@ import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiKey;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 import com.rethinkqaq.configui.core.UiTheme;
 
 /** A bounded numeric slider with keyboard and drag interaction. */
@@ -55,7 +56,8 @@ public class UiSlider extends Ui.Node {
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         measuredWidth = maxWidth;
-        measuredHeight = theme.metrics().controlHeight() + (hasLabel() ? renderer.lineHeight() : 0);
+        measuredHeight = theme.metrics().controlHeight() + (hasLabel()
+            ? UiTextMetrics.lineHeight(renderer, UiTextMetrics.bodyScale(theme.metrics())) : 0);
     }
 
     private void set(double value) {
@@ -66,10 +68,12 @@ public class UiSlider extends Ui.Node {
     public void render(UiRenderer renderer, UiTheme theme) {
         int textColor = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         int accent = enabled() ? theme.palette().accent() : theme.palette().controlDisabled();
-        if (hasLabel()) Ui.drawFittedText(renderer, text, bounds.x(), bounds.y(), bounds.width(), textColor);
+        float textScale = UiTextMetrics.bodyScale(theme.metrics());
+        float labelHeight = UiTextMetrics.lineHeight(renderer, textScale);
+        if (hasLabel()) UiTextMetrics.draw(renderer, text, bounds.x(), bounds.y(), bounds.width(), textColor, textScale);
         float railHeight = Math.max(1f, theme.metrics().borderWidth() * 2);
         float railY = hasLabel()
-            ? bounds.y() + renderer.lineHeight() + theme.metrics().spacing()
+            ? bounds.y() + labelHeight + theme.metrics().spacing()
             : bounds.y() + (bounds.height() - railHeight) / 2f;
         UiBounds rail = new UiBounds(bounds.x(), railY, bounds.width(), railHeight);
         renderer.fillRoundRect(rail, rail.height(), theme.palette().border());
@@ -81,7 +85,7 @@ public class UiSlider extends Ui.Node {
         if (hasVisibleFocus(theme)) renderer.strokeRoundRect(
             new UiBounds(rail.x() - knob / 2, rail.y() - knob / 2, rail.width() + knob, knob + rail.height()),
             knob / 2, theme.metrics().borderWidth(),
-            blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
+            blend(theme.palette().border(), theme.palette().focusRing(), focusProgress() * theme.states().focusStrength()));
     }
 
     public float displayedRatio() { return displayedRatio < 0 ? targetRatio() : displayedRatio; }

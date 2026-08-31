@@ -259,12 +259,7 @@ public final class Ui {
             return current + (target - current) * step;
         }
         protected static int blend(int from, int to, float amount) {
-            float t = Math.max(0f, Math.min(1f, amount));
-            int a = Math.round(((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * t);
-            int r = Math.round(((from >>> 16) & 0xFF) + (((to >>> 16) & 0xFF) - ((from >>> 16) & 0xFF)) * t);
-            int g = Math.round(((from >>> 8) & 0xFF) + (((to >>> 8) & 0xFF) - ((from >>> 8) & 0xFF)) * t);
-            int b = Math.round((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
-            return a << 24 | r << 16 | g << 8 | b;
+            return UiColor.mix(from, to, amount);
         }
         public final void measure(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) { measureSelf(renderer, maxWidth, maxHeight, theme); }
         protected abstract void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme);

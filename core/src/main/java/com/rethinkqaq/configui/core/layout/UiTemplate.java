@@ -23,6 +23,7 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiClipboard;
+import com.rethinkqaq.configui.core.UiColor;
 import com.rethinkqaq.configui.core.UiKeyEvent;
 import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiRenderer;
@@ -235,7 +236,7 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         @Override public void render(UiRenderer renderer, UiTheme theme) {
             if (divider && bounds.width() > 0) {
                 renderer.fillRect(new UiBounds(bounds.x(), bounds.y(), bounds.width(), DIVIDER_HEIGHT),
-                    withAlpha(theme.palette().border(), 90));
+                    UiColor.withAlpha(theme.palette().border(), theme.states().subtleBorderOpacity()));
             }
             child.render(renderer, theme);
         }
@@ -251,6 +252,5 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
             return Math.max(1, theme.metrics().spacing() * .65f);
         }
 
-        private static int withAlpha(int color, int alpha) { return (Math.max(0, Math.min(255, alpha)) << 24) | (color & 0x00FFFFFF); }
     }
 }

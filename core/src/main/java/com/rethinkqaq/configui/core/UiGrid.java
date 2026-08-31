@@ -29,7 +29,7 @@ public final class UiGrid extends Ui.Container {
     // for specialized content through maximumColumnWidth(...).
     private float maximumColumnWidth = 188;
     private float gap = -1;
-    private UiMainAxisAlignment mainAxisAlignment = UiMainAxisAlignment.CENTER;
+    private UiMainAxisAlignment rowAlignment = UiMainAxisAlignment.CENTER;
     private int columns = 1;
     private float cellWidth;
     private final List<Float> rowHeights = new ArrayList<>();
@@ -62,14 +62,14 @@ public final class UiGrid extends Ui.Container {
 
     public int columns() { return columns; }
 
-    /** Sets how each row is positioned when it does not fill the grid width. */
-    public UiGrid mainAxisAlignment(UiMainAxisAlignment value) {
-        mainAxisAlignment = java.util.Objects.requireNonNull(value, "mainAxisAlignment");
+    /** Sets how items are placed within each row. The grid itself is aligned by its parent. */
+    public UiGrid rowAlignment(UiMainAxisAlignment value) {
+        rowAlignment = java.util.Objects.requireNonNull(value, "rowAlignment");
         invalidateLayout();
         return this;
     }
 
-    public UiMainAxisAlignment mainAxisAlignment() { return mainAxisAlignment; }
+    public UiMainAxisAlignment rowAlignment() { return rowAlignment; }
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -90,7 +90,9 @@ public final class UiGrid extends Ui.Container {
         float height = 0;
         for (float rowHeight : rowHeights) height += rowHeight;
         height += actualGap * Math.max(0, rowHeights.size() - 1);
-        measuredWidth = maxWidth;
+        // Expose the grid's real footprint so a parent Column can center the whole grid.
+        // Row alignment then only affects incomplete rows inside that footprint.
+        measuredWidth = Math.min(maxWidth, columns * cellWidth + actualGap * Math.max(0, columns - 1));
         measuredHeight = Math.min(maxHeight, height);
     }
 
@@ -108,12 +110,12 @@ public final class UiGrid extends Ui.Container {
             float rowWidth = rowItems * cellWidth + actualGap * Math.max(0, rowItems - 1);
             float freeWidth = Math.max(0, value.width() - rowWidth);
             float rowGap = actualGap;
-            float rowX = value.x() + switch (mainAxisAlignment) {
+            float rowX = value.x() + switch (rowAlignment) {
                 case START, SPACE_BETWEEN -> 0;
                 case CENTER -> freeWidth / 2f;
                 case END -> freeWidth;
             };
-            if (mainAxisAlignment == UiMainAxisAlignment.SPACE_BETWEEN && rowItems > 1) {
+            if (rowAlignment == UiMainAxisAlignment.SPACE_BETWEEN && rowItems > 1) {
                 rowGap += freeWidth / (rowItems - 1);
             }
             for (int column = 0; column < rowItems && index < children.size(); column++, index++) {

@@ -20,6 +20,7 @@
 package com.rethinkqaq.configui.core.layout;
 
 import com.rethinkqaq.configui.core.UiBounds;
+import com.rethinkqaq.configui.core.UiColor;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTheme;
 
@@ -64,7 +65,7 @@ public class UiPanel extends UiColumn {
     public void render(UiRenderer renderer, UiTheme theme) {
         if (theme.metrics().shadowOffset() > 0) {
             renderer.fillRoundRect(bounds.offset(0, theme.metrics().shadowOffset()),
-                theme.metrics().cardRadius(), 0x10000000);
+                theme.metrics().cardRadius(), UiColor.withOpacity(0x000000, theme.states().shadowOpacity()));
         }
         renderer.fillRoundRect(bounds, theme.metrics().cardRadius(),
             color == Integer.MIN_VALUE ? theme.palette().surfaceRaised() : color);

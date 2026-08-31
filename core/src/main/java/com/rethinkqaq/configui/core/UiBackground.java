@@ -27,11 +27,15 @@ public record UiBackground(Mode mode, int color) {
 
     public UiBackground {
         Objects.requireNonNull(mode, "mode");
-        if (mode == Mode.OPAQUE) color = color | 0xFF000000;
+        if (mode == Mode.OPAQUE) color = UiColor.withAlpha(color, 1f);
     }
 
     public static UiBackground opaque(int color) { return new UiBackground(Mode.OPAQUE, color); }
     public static UiBackground translucent(int color) { return new UiBackground(Mode.TRANSLUCENT, color); }
+    public static UiBackground opaqueRgb(int rgb) { return opaque(UiColor.withOpacity(rgb, 1f)); }
+    public static UiBackground translucent(int rgb, float opacity) {
+        return new UiBackground(Mode.TRANSLUCENT, UiColor.withOpacity(rgb, opacity));
+    }
     public static UiBackground transparent() { return new UiBackground(Mode.TRANSPARENT, 0); }
 
     public boolean paintsSurface() { return mode != Mode.TRANSPARENT; }

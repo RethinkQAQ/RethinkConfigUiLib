@@ -23,8 +23,10 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiKeyEvent;
+import com.rethinkqaq.configui.core.UiLabeledControlLayout;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 import com.rethinkqaq.configui.core.UiTextInput;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.setting.UiValidationResult;
@@ -40,67 +42,56 @@ public final class UiFormField extends Ui.Node implements Ui.ChildProvider {
     private UiText description;
     private Supplier<UiValidationResult> validation = () -> UiValidationResult.OK;
     private float compactWidth = DEFAULT_COMPACT_WIDTH;
-    private boolean compact;
-    private int labelLines;
-    private int descriptionLines;
-    private float labelHeight;
-    private float controlWidth;
+    private final UiLabeledControlLayout layout = new UiLabeledControlLayout();
 
     public UiFormField(UiText label, Ui.Node control) {
         this.label = Objects.requireNonNull(label, "label");
         this.control = Objects.requireNonNull(control, "control");
     }
 
-    public UiFormField description(UiText value) { description = Objects.requireNonNull(value, "value"); return this; }
-    public UiFormField validation(Supplier<UiValidationResult> value) { validation = Objects.requireNonNull(value, "value"); return this; }
-    public UiFormField compactBelow(float value) { if (value <= 0) throw new IllegalArgumentException("compact width"); compactWidth = value; return this; }
+    public UiFormField description(UiText value) {
+        description = Objects.requireNonNull(value, "value");
+        invalidateMeasure();
+        return this;
+    }
+    public UiFormField validation(Supplier<UiValidationResult> value) {
+        validation = Objects.requireNonNull(value, "value");
+        invalidateMeasure();
+        return this;
+    }
+    public UiFormField compactBelow(float value) {
+        if (value <= 0) throw new IllegalArgumentException("compact width");
+        compactWidth = value;
+        invalidateMeasure();
+        return this;
+    }
     public Ui.Node control() { return control; }
 
     @Override public UiFormField enabled(boolean value) { super.enabled(value); control.enabled(value); return this; }
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        compact = maxWidth < compactWidth;
-        if (compact) {
-            control.measure(renderer, maxWidth, maxHeight, theme);
-            controlWidth = maxWidth;
-            labelLines = Ui.wrapLines(renderer, label, maxWidth, 3).size();
-            descriptionLines = description == null ? 0 : Ui.wrapLines(renderer, description, maxWidth, 3).size();
-        } else {
-            controlWidth = Math.min(Math.max(theme.metrics().controlHeight() * 3.5f, maxWidth * .38f), maxWidth * .5f);
-            control.measure(renderer, controlWidth, maxHeight, theme);
-            controlWidth = control.measuredWidth();
-            float textWidth = Math.max(0, maxWidth - controlWidth - theme.metrics().spacing());
-            labelLines = Ui.wrapLines(renderer, label, textWidth, 3).size();
-            descriptionLines = description == null ? 0 : Ui.wrapLines(renderer, description, textWidth, 3).size();
-        }
-        labelHeight = renderer.lineHeight() * labelLines + (descriptionLines == 0 ? 0 : descriptionLines * renderer.lineHeight() + theme.metrics().spacing() / 2f);
+        layout.measure(renderer, label, description, control, maxWidth, maxHeight, theme, compactWidth);
         float messageHeight = messageHeight(renderer, theme);
         measuredWidth = maxWidth;
-        measuredHeight = (compact ? labelHeight + theme.metrics().spacing() + control.measuredHeight() : Math.max(labelHeight, control.measuredHeight())) + messageHeight;
+        measuredHeight = layout.measuredHeight(control, theme) + messageHeight;
     }
 
     @Override public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
         float messageHeight = messageHeight(renderer, theme);
-        float controlAreaHeight = Math.max(0, value.height() - messageHeight);
-        if (compact) {
-            control.layout(renderer, new UiBounds(value.x(), value.y() + labelHeight + theme.metrics().spacing(), value.width(), control.measuredHeight()), theme);
-        } else {
-            control.layout(renderer, new UiBounds(value.x() + value.width() - controlWidth,
-                value.y() + (controlAreaHeight - control.measuredHeight()) / 2f, controlWidth, control.measuredHeight()), theme);
-        }
+        layout.layout(renderer, value, control, theme, messageHeight);
     }
 
     @Override public void render(UiRenderer renderer, UiTheme theme) {
         UiValidationResult result = validation.get();
         int primary = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         int secondary = enabled() ? theme.palette().textSecondary() : theme.palette().textDisabled();
-        float textWidth = compact ? bounds.width() : Math.max(0, control.bounds().x() - bounds.x() - theme.metrics().spacing());
-        Ui.drawWrappedText(renderer, label, bounds.x(), bounds.y(), textWidth, labelLines, primary, 0);
-        if (description != null) Ui.drawWrappedText(renderer, description, bounds.x(), bounds.y() + renderer.lineHeight() * labelLines + theme.metrics().spacing() / 2f, textWidth, descriptionLines, secondary, 0);
+        layout.render(renderer, bounds, theme, primary, secondary);
         control.render(renderer, theme);
         if (result.severity() != UiValidationResult.Severity.OK) {
             int color = result.severity() == UiValidationResult.Severity.ERROR ? theme.palette().danger() : theme.palette().warning();
-            Ui.drawFittedText(renderer, result.message(), bounds.x(), bounds.y() + bounds.height() - renderer.lineHeight(), bounds.width(), color);
+            float scale = UiTextMetrics.bodyScale(theme.metrics());
+            UiTextMetrics.draw(renderer, result.message(), bounds.x(),
+                bounds.y() + bounds.height() - UiTextMetrics.lineHeight(renderer, scale), bounds.width(), color, scale);
         }
     }
 
@@ -114,6 +105,7 @@ public final class UiFormField extends Ui.Node implements Ui.ChildProvider {
     @Override public boolean focusable() { return false; }
 
     private float messageHeight(UiRenderer renderer, UiTheme theme) {
-        return validation.get().severity() == UiValidationResult.Severity.OK ? 0 : renderer.lineHeight() + theme.metrics().spacing() / 2f;
+        return validation.get().severity() == UiValidationResult.Severity.OK ? 0
+            : UiTextMetrics.lineHeight(renderer, UiTextMetrics.bodyScale(theme.metrics())) + theme.metrics().spacing() / 2f;
     }
 }

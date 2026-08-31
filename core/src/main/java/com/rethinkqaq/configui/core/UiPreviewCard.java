@@ -31,11 +31,14 @@ import java.util.function.BooleanSupplier;
 public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui.SelfDispatching, Ui.ClipProvider {
     private final UiText title;
     private UiText description;
-    private List<UiText> descriptionLines = List.of();
+    private UiTextMetrics.Block titleBlock = new UiTextMetrics.Block(List.of(), 1, 0, 0);
+    private UiTextMetrics.Block descriptionBlock = new UiTextMetrics.Block(List.of(), 1, 0, 0);
+    private int maximumDescriptionLines = 3;
     private final Ui.Node preview;
     private Ui.Node action;
     private float previewHeight = 72;
     private float headerHeight;
+    private float actionHeight;
     private Runnable cardAction;
     private BooleanSupplier selected = () -> false;
 
@@ -44,15 +47,24 @@ public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui
         this.preview = Objects.requireNonNull(preview, "preview");
     }
 
-    public UiPreviewCard description(UiText value) { description = Objects.requireNonNull(value, "description"); return this; }
-    public UiPreviewCard action(Ui.Node value) { action = Objects.requireNonNull(value, "action"); return this; }
+    public UiPreviewCard description(UiText value) { description = Objects.requireNonNull(value, "description"); invalidateMeasure(); return this; }
+    public UiPreviewCard action(Ui.Node value) { action = Objects.requireNonNull(value, "action"); invalidateMeasure(); return this; }
     public UiPreviewCard onClick(Runnable value) { cardAction = Objects.requireNonNull(value, "onClick"); return this; }
     public UiPreviewCard selected(BooleanSupplier value) { selected = Objects.requireNonNull(value, "selected"); return this; }
     public UiPreviewCard previewHeight(float value) {
         if (value <= 0) throw new IllegalArgumentException("preview height must be positive");
         previewHeight = value;
+        invalidateMeasure();
         return this;
     }
+    /** Limits description text while retaining a fixed slot for every card in the grid. */
+    public UiPreviewCard maximumDescriptionLines(int value) {
+        if (value < 0) throw new IllegalArgumentException("maximumDescriptionLines must be non-negative");
+        maximumDescriptionLines = value;
+        invalidateMeasure();
+        return this;
+    }
+    public int maximumDescriptionLines() { return maximumDescriptionLines; }
     @Override public List<Ui.Node> childNodes() {
         List<Ui.Node> result = new ArrayList<>();
         result.add(preview);
@@ -67,24 +79,27 @@ public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         float innerWidth = Math.max(0, maxWidth - theme.metrics().padding() * 2);
-        if (description == null) {
-            descriptionLines = List.of();
-        } else {
-            descriptionLines = Ui.wrapLines(renderer, description, innerWidth, 3, false);
-        }
-        float descriptionHeight = descriptionLines.isEmpty() ? 0
-            : descriptionLines.size() * renderer.lineHeight()
-                + Math.max(0, descriptionLines.size() - 1) * theme.metrics().spacing() / 2f;
-        headerHeight = renderer.lineHeight() + descriptionHeight;
+        float textScale = UiTextMetrics.bodyScale(theme.metrics());
+        float textGap = theme.metrics().spacing() / 2f;
+        titleBlock = UiTextMetrics.block(renderer, title, innerWidth, 1, textScale, 0, true);
+        descriptionBlock = description == null || maximumDescriptionLines == 0
+            ? new UiTextMetrics.Block(List.of(), textScale, UiTextMetrics.lineHeight(renderer, textScale), textGap)
+            : UiTextMetrics.block(renderer, description, innerWidth, maximumDescriptionLines, textScale, textGap, false);
+        // Reserve a fixed description slot: card previews share one vertical baseline even when
+        // localized descriptions use fewer lines.
+        float descriptionSlotHeight = maximumDescriptionLines == 0 ? 0
+            : maximumDescriptionLines * descriptionBlock.lineHeight()
+                + Math.max(0, maximumDescriptionLines - 1) * descriptionBlock.lineGap();
+        headerHeight = titleBlock.height() + (maximumDescriptionLines == 0 ? 0 : textGap + descriptionSlotHeight);
         preview.measure(renderer, innerWidth, previewHeight, theme);
-        float actionHeight = 0;
+        actionHeight = 0;
         if (action != null) {
             action.measure(renderer, innerWidth, maxHeight, theme);
-            actionHeight = action.measuredHeight() + theme.metrics().spacing();
+            actionHeight = action.measuredHeight();
         }
         measuredWidth = maxWidth;
         measuredHeight = Math.min(maxHeight, theme.metrics().padding() * 2 + headerHeight + theme.metrics().spacing()
-            + previewHeight + actionHeight);
+            + previewHeight + (action == null ? 0 : theme.metrics().spacing() + actionHeight));
     }
 
     @Override
@@ -93,10 +108,12 @@ public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui
         float padding = theme.metrics().padding();
         float innerWidth = Math.max(0, value.width() - padding * 2);
         float y = value.y() + padding + headerHeight + theme.metrics().spacing();
-        preview.layout(renderer, new UiBounds(value.x() + padding, y, innerWidth, previewHeight), theme);
+        float actionY = action == null ? value.y() + value.height() - padding
+            : value.y() + value.height() - padding - actionHeight;
+        float previewSlotHeight = Math.min(previewHeight, Math.max(0, actionY - theme.metrics().spacing() - y));
+        preview.layout(renderer, new UiBounds(value.x() + padding, y, innerWidth, previewSlotHeight), theme);
         if (action != null) {
-            y += previewHeight + theme.metrics().spacing();
-            action.layout(renderer, new UiBounds(value.x() + padding, y, innerWidth, action.measuredHeight()), theme);
+            action.layout(renderer, new UiBounds(value.x() + padding, actionY, innerWidth, actionHeight), theme);
         }
     }
 
@@ -115,16 +132,12 @@ public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui
                 Math.max(1, theme.metrics().borderWidth()), theme.palette().accent());
         }
         float padding = theme.metrics().padding();
-        float centerX = bounds.x() + bounds.width() / 2f;
-        UiText fittedTitle = Ui.fitText(renderer, title, Math.max(0, bounds.width() - padding * 2));
-        renderer.drawCenteredText(fittedTitle, centerX, bounds.y() + padding, theme.palette().textPrimary());
-        float descriptionY = bounds.y() + padding + renderer.lineHeight() + theme.metrics().spacing() / 2f;
-        for (int index = 0; index < descriptionLines.size(); index++) {
-            UiText line = Ui.fitText(renderer, descriptionLines.get(index), Math.max(0, bounds.width() - padding * 2));
-            renderer.drawCenteredText(line, centerX,
-                descriptionY + index * (renderer.lineHeight() + theme.metrics().spacing() / 2f),
-                theme.palette().textSecondary());
-        }
+        float textWidth = Math.max(0, bounds.width() - padding * 2);
+        UiTextMetrics.drawBlock(renderer, titleBlock, bounds.x() + padding, bounds.y() + padding,
+            textWidth, theme.palette().textPrimary(), true);
+        UiTextMetrics.drawBlock(renderer, descriptionBlock, bounds.x() + padding,
+            bounds.y() + padding + titleBlock.height() + theme.metrics().spacing() / 2f,
+            textWidth, theme.palette().textSecondary(), true);
         if (action != null) action.render(renderer, theme);
         renderer.popClip();
     }

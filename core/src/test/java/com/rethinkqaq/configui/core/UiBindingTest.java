@@ -124,6 +124,26 @@ class UiBindingTest {
     }
 
     @Test
+    void previewCardReservesDescriptionSlotAndAnchorsActionsToItsBottom() {
+        UiPreviewCard shortDescription = Ui.previewCard(UiText.literal("Style"), Ui.label(UiText.literal("Preview")))
+            .description(UiText.literal("Short"))
+            .action(Ui.button(UiText.literal("Select"), () -> { }));
+        UiPreviewCard longDescription = Ui.previewCard(UiText.literal("Style"), Ui.label(UiText.literal("Preview")))
+            .description(UiText.literal("A longer localized description that uses more than one line"))
+            .action(Ui.button(UiText.literal("Select"), () -> { }));
+        UiTheme theme = UiTheme.roseLight();
+        shortDescription.measure(RENDERER, 180, 320, theme);
+        longDescription.measure(RENDERER, 180, 320, theme);
+        shortDescription.layout(RENDERER, new UiBounds(0, 0, 180, 300), theme);
+        longDescription.layout(RENDERER, new UiBounds(0, 0, 180, 300), theme);
+
+        Ui.Node shortAction = shortDescription.childNodes().get(1);
+        Ui.Node longAction = longDescription.childNodes().get(1);
+        assertEquals(shortAction.bounds().y(), longAction.bounds().y());
+        assertEquals(300 - theme.metrics().padding(), shortAction.bounds().y() + shortAction.bounds().height());
+    }
+
+    @Test
     void nonEqualRowAlignmentUsesActualChildrenWidth() {
         Ui.Row row = Ui.row().gap(6).mainAxisAlignment(UiMainAxisAlignment.END)
             .add(Ui.button(UiText.literal("Import"), () -> { }).preferredWidth(60))
@@ -161,7 +181,7 @@ class UiBindingTest {
     @Test
     void gridAlignsIncompleteRowsAlongTheMainAxis() {
         UiGrid grid = Ui.grid().minimumColumnWidth(40).maximumColumnWidth(40).gap(10)
-            .mainAxisAlignment(UiMainAxisAlignment.END)
+            .rowAlignment(UiMainAxisAlignment.END)
             .add(Ui.label(UiText.literal("One")))
             .add(Ui.label(UiText.literal("Two")))
             .add(Ui.label(UiText.literal("Three")))

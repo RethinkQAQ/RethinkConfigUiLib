@@ -27,16 +27,22 @@ import java.util.Objects;
  * <p>A theme describes intent instead of component-specific colours. A host can replace the
  * rose palette without changing a control implementation.</p>
  */
-public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
+public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiStateVisuals states) {
     public UiTheme {
         Objects.requireNonNull(palette, "palette");
         Objects.requireNonNull(metrics, "metrics");
         Objects.requireNonNull(motion, "motion");
+        Objects.requireNonNull(states, "states");
     }
 
-    public UiTheme withPalette(UiPalette value) { return new UiTheme(value, metrics, motion); }
-    public UiTheme withMetrics(UiMetrics value) { return new UiTheme(palette, value, motion); }
-    public UiTheme withMotion(UiMotion value) { return new UiTheme(palette, metrics, value); }
+    public UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
+        this(palette, metrics, motion, UiStateVisuals.defaults());
+    }
+
+    public UiTheme withPalette(UiPalette value) { return new UiTheme(value, metrics, motion, states); }
+    public UiTheme withMetrics(UiMetrics value) { return new UiTheme(palette, value, motion, states); }
+    public UiTheme withMotion(UiMotion value) { return new UiTheme(palette, metrics, value, states); }
+    public UiTheme withStates(UiStateVisuals value) { return new UiTheme(palette, metrics, motion, value); }
     public UiTheme withAccent(int value) { return withPalette(palette.withAccent(value)); }
 
     public static Builder builder() { return new Builder(); }
@@ -70,11 +76,34 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion) {
         private UiPalette palette = UiPalette.roseLight();
         private UiMetrics metrics = UiMetrics.comfortable();
         private UiMotion motion = UiMotion.defaults();
+        private UiStateVisuals states = UiStateVisuals.defaults();
 
         public Builder palette(UiPalette value) { palette = Objects.requireNonNull(value, "palette"); return this; }
         public Builder metrics(UiMetrics value) { metrics = Objects.requireNonNull(value, "metrics"); return this; }
         public Builder motion(UiMotion value) { motion = Objects.requireNonNull(value, "motion"); return this; }
-        public UiTheme build() { return new UiTheme(palette, metrics, motion); }
+        public Builder states(UiStateVisuals value) { states = Objects.requireNonNull(value, "states"); return this; }
+        public UiTheme build() { return new UiTheme(palette, metrics, motion, states); }
+    }
+
+    /** Theme-owned blend and opacity values for shared interactive states. */
+    public record UiStateVisuals(float modalOverlayOpacity, float subtleBorderOpacity,
+                                 float alertFillOpacity, float alertBorderOpacity,
+                                 float shadowOpacity, float disabledStrength, float hoverStrength,
+                                 float pressedStrength, float focusStrength) {
+        public UiStateVisuals {
+            UiColor.validateUnit(modalOverlayOpacity, "modalOverlayOpacity");
+            UiColor.validateUnit(subtleBorderOpacity, "subtleBorderOpacity");
+            UiColor.validateUnit(alertFillOpacity, "alertFillOpacity");
+            UiColor.validateUnit(alertBorderOpacity, "alertBorderOpacity");
+            UiColor.validateUnit(shadowOpacity, "shadowOpacity");
+            UiColor.validateUnit(disabledStrength, "disabledStrength");
+            UiColor.validateUnit(hoverStrength, "hoverStrength");
+            UiColor.validateUnit(pressedStrength, "pressedStrength");
+            UiColor.validateUnit(focusStrength, "focusStrength");
+        }
+        public static UiStateVisuals defaults() {
+            return new UiStateVisuals(0.4f, 90 / 255f, 32 / 255f, 160 / 255f, 16 / 255f, .35f, .12f, .12f, .55f);
+        }
     }
 
     /** Semantic colour tokens. Values use the Minecraft ARGB integer format. */

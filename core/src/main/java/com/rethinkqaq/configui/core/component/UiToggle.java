@@ -24,6 +24,7 @@ import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiBinding;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
+import com.rethinkqaq.configui.core.UiTextMetrics;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.UiKey;
 
@@ -52,14 +53,15 @@ public class UiToggle extends Ui.Node {
     public void render(UiRenderer renderer, UiTheme theme) {
         boolean on = Boolean.TRUE.equals(binding.get());
         float width = theme.metrics().controlHeight() * 1.65f;
-        Ui.drawFittedText(renderer, text, bounds.x(),
-            bounds.y() + (bounds.height() - renderer.lineHeight()) / 2,
+        float textScale = UiTextMetrics.buttonScale(theme.metrics());
+        UiTextMetrics.draw(renderer, text, bounds.x(),
+            bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, textScale)) / 2,
             Math.max(0, bounds.width() - width - theme.metrics().spacing()),
-            enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled());
+            enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled(), textScale);
         float progress = onProgress < 0 ? (on ? 1f : 0f) : onProgress;
         UiBounds track = new UiBounds(bounds.x() + bounds.width() - width, bounds.y(), width, bounds.height());
         int trackColor = !enabled()
-            ? blend(theme.palette().controlDisabled(), theme.palette().surface(), .35f)
+            ? blend(theme.palette().controlDisabled(), theme.palette().surface(), theme.states().disabledStrength())
             : blend(theme.palette().control(), theme.palette().accent(), progress);
         renderer.fillRoundRect(track, track.height() / 2, trackColor);
         float knob = track.height() - theme.metrics().padding();
@@ -69,7 +71,7 @@ public class UiToggle extends Ui.Node {
             track.y() + theme.metrics().padding() / 2, knob, knob), knob / 2,
             enabled() ? theme.palette().surfaceRaised() : theme.palette().textDisabled());
         if (hasVisibleFocus(theme)) renderer.strokeRoundRect(track, track.height() / 2,
-            theme.metrics().borderWidth(), blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
+            theme.metrics().borderWidth(), blend(theme.palette().border(), theme.palette().focusRing(), focusProgress() * theme.states().focusStrength()));
     }
 
     public float onProgress() { return onProgress < 0 ? (Boolean.TRUE.equals(binding.get()) ? 1f : 0f) : onProgress; }

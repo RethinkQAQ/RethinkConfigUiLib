@@ -33,8 +33,9 @@ public final class UiBadge extends Ui.Node {
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
         float padding = theme.metrics().padding() * .55f;
-        measuredWidth = Math.min(maxWidth, renderer.textWidth(text) + padding * 2);
-        measuredHeight = Math.min(maxHeight, renderer.lineHeight() + padding);
+        float scale = UiTextMetrics.buttonScale(theme.metrics());
+        measuredWidth = Math.min(maxWidth, renderer.textWidth(text, scale) + padding * 2);
+        measuredHeight = Math.min(maxHeight, UiTextMetrics.lineHeight(renderer, scale) + padding);
     }
     @Override public void render(UiRenderer renderer, UiTheme theme) {
         int color = switch (tone) {
@@ -45,7 +46,10 @@ public final class UiBadge extends Ui.Node {
             case DANGER -> theme.palette().danger();
         };
         renderer.fillRoundRect(bounds, bounds.height() / 2f, color);
-        float x = bounds.x() + (bounds.width() - renderer.textWidth(text)) / 2f;
-        renderer.drawText(text, x, bounds.y() + (bounds.height() - renderer.lineHeight()) / 2f, theme.palette().onAccent());
+        float scale = UiTextMetrics.buttonScale(theme.metrics());
+        float x = bounds.x() + (bounds.width() - renderer.textWidth(text, scale)) / 2f;
+        UiTextMetrics.draw(renderer, text, x,
+            bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, scale)) / 2f,
+            bounds.width(), theme.palette().onAccent(), scale);
     }
 }
