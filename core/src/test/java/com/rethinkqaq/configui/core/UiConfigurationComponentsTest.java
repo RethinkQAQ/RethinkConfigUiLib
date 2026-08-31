@@ -41,6 +41,7 @@ import com.rethinkqaq.configui.core.setting.UiListSetting;
 import com.rethinkqaq.configui.core.setting.UiNumberSpec;
 import com.rethinkqaq.configui.core.setting.UiSetting;
 import com.rethinkqaq.configui.core.setting.UiValidationResult;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -311,6 +312,29 @@ class UiConfigurationComponentsTest {
         assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, -0.01f));
         assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, 1.01f));
         assertThrows(IllegalArgumentException.class, () -> UiColor.withOpacity(0, Float.NaN));
+    }
+
+    @Test
+    void dialogContentUsesThePlatformOverlayLayer() {
+        List<String> calls = new ArrayList<>();
+        UiRenderer renderer = new UiRenderer() {
+            @Override public void fillRect(UiBounds bounds, int color) { }
+            @Override public void fillRoundRect(UiBounds bounds, float radius, int color) { }
+            @Override public void strokeRoundRect(UiBounds bounds, float radius, float width, int color) { }
+            @Override public void drawText(UiText text, float x, float y, int color) { }
+            @Override public float textWidth(UiText text) { return text.value().length() * 6f; }
+            @Override public float lineHeight() { return 10; }
+            @Override public void pushClip(UiBounds bounds) { }
+            @Override public void popClip() { }
+            @Override public void pushOverlay() { calls.add("push"); }
+            @Override public void popOverlay() { calls.add("pop"); }
+        };
+        UiDialogHost dialogs = Ui.dialogHost(Ui.label(UiText.literal("Page")));
+        dialogs.show(Ui.label(UiText.literal("Dialog")));
+        dialogs.measure(renderer, 200, 120, UiTheme.roseLight());
+        dialogs.layout(renderer, new UiBounds(0, 0, 200, 120), UiTheme.roseLight());
+        dialogs.render(renderer, UiTheme.roseLight());
+        assertEquals(List.of("push", "pop"), calls);
     }
 
     private static final UiRenderer RENDERER = new UiRenderer() {

@@ -113,8 +113,13 @@ public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider, Ui.
         if (root != null) root.render(renderer, theme);
         if (dialog == null) return;
         UiBounds area = viewport.width() > 0 && viewport.height() > 0 ? viewport : bounds;
-        renderer.fillRoundRect(area, 0, UiColor.withOpacity(0x000000, theme.states().modalOverlayOpacity()));
-        dialog.render(renderer, theme);
+        renderer.pushOverlay();
+        try {
+            renderer.fillRoundRect(area, 0, UiColor.withOpacity(0x000000, theme.states().modalOverlayOpacity()));
+            dialog.render(renderer, theme);
+        } finally {
+            renderer.popOverlay();
+        }
     }
 
     @Override public boolean click(float x, float y, int button) {
