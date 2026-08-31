@@ -43,27 +43,38 @@ public final class UiCustom extends Ui.Node {
         measuredHeight = Math.max(0, Math.min(maxHeight, size.height()));
     }
 
-    @Override public void render(UiRenderer renderer, UiTheme theme) { this.renderer.render(renderer, bounds, theme); }
+    @Override public void render(UiRenderer renderer, UiTheme theme) {
+        if (visible()) this.renderer.render(renderer, bounds, theme);
+    }
 
     @Override public boolean click(float x, float y, int button) {
-        return enabled() && bounds.contains(x, y) && clickHandler != null && clickHandler.click(x, y, button);
+        return visible() && enabled() && bounds.contains(x, y) && clickHandler != null && clickHandler.click(x, y, button);
     }
 
     public static final class Builder {
         private float width;
         private float height;
+        private float minWidth;
+        private float minHeight;
+        private float maxWidth = Float.MAX_VALUE;
+        private float maxHeight = Float.MAX_VALUE;
         private Measurer measurer;
         private Renderer renderer = (target, bounds, theme) -> { };
         private ClickHandler clickHandler;
 
         public Builder preferredWidth(float value) { width = requireNonNegative(value, "width"); return this; }
         public Builder preferredHeight(float value) { height = requireNonNegative(value, "height"); return this; }
+        public Builder minWidth(float value) { minWidth = requireNonNegative(value, "minWidth"); return this; }
+        public Builder minHeight(float value) { minHeight = requireNonNegative(value, "minHeight"); return this; }
+        public Builder maxWidth(float value) { maxWidth = requireNonNegative(value, "maxWidth"); return this; }
+        public Builder maxHeight(float value) { maxHeight = requireNonNegative(value, "maxHeight"); return this; }
         public Builder measure(Measurer value) { measurer = Objects.requireNonNull(value, "measurer"); return this; }
         public Builder render(Renderer value) { renderer = Objects.requireNonNull(value, "renderer"); return this; }
         public Builder click(ClickHandler value) { clickHandler = value; return this; }
         public UiCustom build() {
             Measurer resolved = measurer == null ? (target, maxWidth, maxHeight, theme) ->
-                new UiBounds(0, 0, Math.min(width, maxWidth), Math.min(height, maxHeight)) : measurer;
+                new UiBounds(0, 0, Math.min(Math.min(maxWidth, this.maxWidth), Math.max(minWidth, width)),
+                    Math.min(Math.min(maxHeight, this.maxHeight), Math.max(minHeight, height))) : measurer;
             return new UiCustom(resolved, renderer, clickHandler);
         }
 

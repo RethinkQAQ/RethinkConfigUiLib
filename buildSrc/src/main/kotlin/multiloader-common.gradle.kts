@@ -29,7 +29,11 @@ val configuredJavaVersion = commonMod.mc.let { version ->
         else -> 8
     }
 }
-val mixinCompatibilityLevel = "JAVA_$configuredJavaVersion"
+val mixinCompatibilityLevel = if (loader == "forge" && configuredJavaVersion > 21) {
+    "JAVA_21"
+} else {
+    "JAVA_$configuredJavaVersion"
+}
 val buildSuffix = commonMod.propOrNull("build.number")?.trim()?.takeIf(String::isNotEmpty)
 version = listOfNotNull(commonMod.version, buildSuffix, "mc${commonMod.mc}").joinToString("-")
 // Stonecutter branches share the same Gradle project name (the MC version).

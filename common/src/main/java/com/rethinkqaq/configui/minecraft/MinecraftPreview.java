@@ -67,9 +67,11 @@ public final class MinecraftPreview extends Ui.Node {
     }
 
     @Override public void render(UiRenderer target, UiTheme theme) {
+        if (!visible() || bounds.width() <= 0 || bounds.height() <= 0) return;
         if (target instanceof MinecraftUiRenderer minecraftRenderer) {
             target.pushClip(bounds);
-            try { minecraftRenderer.renderPreview(renderer, bounds, minecraftRenderer.currentClip()); }
+            UiBounds clip = minecraftRenderer.currentClip();
+            try { if (clip != null && clip.intersects(bounds)) minecraftRenderer.renderPreview(renderer, bounds, clip); }
             finally { target.popClip(); }
         }
     }

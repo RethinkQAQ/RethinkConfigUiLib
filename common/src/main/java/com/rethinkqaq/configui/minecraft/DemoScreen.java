@@ -252,6 +252,19 @@ public final class DemoScreen extends UiScreen {
                 .add(Ui.button(UiText.literal("Close"), dialogs::close)));
     }
     private static Ui.Node advancedPage() {
+        AtomicBoolean customEnabled = new AtomicBoolean(true);
+        Ui.Column dynamicNodes = Ui.column().gap(6);
+        AtomicReference<Ui.Node> dynamicNode = new AtomicReference<>();
+        Ui.Node customSurface = Ui.custom()
+            .preferredHeight(48)
+            .render((renderer, bounds, theme) -> {
+                renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), theme.palette().surfaceRaised());
+                renderer.drawCenteredText(UiText.literal("Ui.custom() extension point"),
+                    bounds.x() + bounds.width() / 2f, bounds.y() + 14, theme.palette().textPrimary());
+            })
+            .click((x, y, button) -> { customEnabled.set(!customEnabled.get()); return true; })
+            .build()
+            .visible(true);
         Ui.Container disabled = Ui.section(UiText.literal("STATES"));
         disabled.add(Ui.settingRow(UiText.literal("Disabled toggle"),
                 Ui.toggle(UiText.literal("Unavailable"), UiBinding.of(() -> false, value -> { }))
@@ -262,7 +275,24 @@ public final class DemoScreen extends UiScreen {
         return Ui.column().gap(14)
             .add(Ui.section(UiText.literal("ADVANCED"))
                 .add(Ui.label(UiText.literal("Any core node can be composed into a secondary page."))
-                    .wrap(true)))
+                    .wrap(true))
+                .add(Ui.tooltip(customSurface, UiText.literal("A platform-neutral custom node with its own measure, render and click contract.")))
+                .add(Ui.button(UiText.literal("Toggle custom visibility"),
+                    () -> customSurface.visible(!customSurface.visible())))
+                .add(Ui.label(UiText.literal("Toggle visibility, then hover and click the surface again to verify that hidden nodes do not receive input."))
+                    .wrap(true))
+                .add(Ui.button(UiText.literal("Add / remove dynamic node"), () -> {
+                    Ui.Node current = dynamicNode.get();
+                    if (current == null) {
+                        current = Ui.badge(UiText.literal("Dynamically mounted node"));
+                        dynamicNode.set(current);
+                        dynamicNodes.add(current);
+                    } else {
+                        dynamicNodes.remove(current);
+                        dynamicNode.set(null);
+                    }
+                }))
+                .add(dynamicNodes))
             .add(disabled)
             .add(Ui.badge(UiText.literal("Theme override ready")).tone(UiBadge.Tone.ACCENT));
     }

@@ -78,8 +78,12 @@ public class UiTooltip extends Ui.Node {
     public float padding(UiTheme theme) { return padding < 0 ? theme.metrics().padding() / 2f : padding; }
     public float lineGap() { return lineGap; }
     public TextOverflow overflow() { return overflow; }
-    public boolean visible(long nowNanos) { return (hovered() || child.focused()) && hoverStartedNanos >= 0 && (nowNanos - hoverStartedNanos) / 1_000_000L >= delayMillis; }
+    public boolean visible(long nowNanos) {
+        return child.visible() && (hovered() || child.focused()) && hoverStartedNanos >= 0
+            && (nowNanos - hoverStartedNanos) / 1_000_000L >= delayMillis;
+    }
     @Override public void setHovered(boolean value) {
+        if (!child.visible()) value = false;
         boolean changed = value != hovered(); super.setHovered(value);
         if (value && changed) hoverStartedNanos = System.nanoTime();
         if (value && hoverStartedNanos < 0) hoverStartedNanos = System.nanoTime();

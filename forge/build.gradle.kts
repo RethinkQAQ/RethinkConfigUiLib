@@ -6,6 +6,7 @@ import org.gradle.api.publish.tasks.GenerateModuleMetadata
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.Copy
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.kotlin.dsl.withGroovyBuilder
 
@@ -105,11 +106,16 @@ val forgeDependency = requireNotNull(minecraftExtension.withGroovyBuilder {
 
 val snakeYaml = "org.snakeyaml:snakeyaml-engine:${providers.gradleProperty("rcui.snakeyaml_engine_version").get()}"
 val snakeYamlBundle = configurations.detachedConfiguration(project.dependencies.create(snakeYaml))
+val coreClasses = project(":core").layout.buildDirectory.dir("classes/java/main")
+val coreResources = project(":core").layout.buildDirectory.dir("resources/main")
 val configClasses = project(":config").layout.buildDirectory.dir("classes/java/main")
 val configResources = project(":config").layout.buildDirectory.dir("resources/main")
 
 dependencies {
-    implementation(project(":core"))
+    // Core is merged into the Forge main output/Jar below. Keeping it as an
+    // implementation dependency would also put core.jar on Forge's module
+    // path and create a split-package with the merged classes.
+    compileOnly(project(":core"))
     implementation(forgeDependency)
     val configDependency = project.dependencies.project(mapOf("path" to ":config"))
     compileOnly(configDependency)
@@ -134,6 +140,8 @@ extensions.getByName("fletchingTable").withGroovyBuilder {
 
 if (supportsJarJar) {
     tasks.withType<JarJar>().configureEach {
+        from(coreClasses)
+        from(coreResources)
         from(configClasses)
         from(configResources)
         from({ snakeYamlBundle.files.map { zipTree(it) } }) {
@@ -143,6 +151,8 @@ if (supportsJarJar) {
     }
 } else {
     tasks.jar {
+        from(coreClasses)
+        from(coreResources)
         from(configClasses)
         from(configResources)
         from({ snakeYamlBundle.files.map { zipTree(it) } }) {
@@ -201,7 +211,7 @@ tasks.jar {
 }
 
 tasks.named("classes") {
-    dependsOn(":core:classes", ":config:classes", ":config:processResources")
+    dependsOn(":core:classes", ":core:processResources", ":config:classes", ":config:processResources")
 }
 tasks.named<Jar>("sourcesJar") {
     from(project(":core").file("src/main/java"))
@@ -212,6 +222,15 @@ sourceSets.named("main") {
     java.destinationDirectory.set(outputDirectory)
     output.setResourcesDir(outputDirectory.get().asFile)
     resources.srcDir(layout.buildDirectory.dir("generated/access-transformer"))
+}
+val mergeEmbeddedClasses = tasks.register<Copy>("mergeEmbeddedClasses") {
+    dependsOn(":core:classes", ":core:processResources", ":config:classes", ":config:processResources")
+    from(coreClasses)
+    from(coreResources)
+    from(configClasses)
+    from(configResources)
+    into(sourceSets.named("main").get().output.classesDirs.singleFile)
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 tasks.named<ProcessResources>("processResources") {
     dependsOn(":config:processResources")
@@ -227,7 +246,7 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 val prepareForgeDevMod = tasks.register("prepareForgeDevMod") {
-    dependsOn("classes", "processResources")
+    dependsOn("classes", "processResources", mergeEmbeddedClasses)
 }
 tasks.matching { it.name in setOf("runClient", "runServer") }.configureEach {
     dependsOn(prepareForgeDevMod)

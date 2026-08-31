@@ -82,6 +82,7 @@ public final class UiHost {
         this.theme = Objects.requireNonNull(theme, "theme");
         this.layoutMode = Objects.requireNonNull(layoutMode, "layoutMode");
         this.background = initialBackground;
+        this.root.mount();
     }
 
     public UiTheme theme() { return theme; }
@@ -103,6 +104,8 @@ public final class UiHost {
     /** Provides the host clipboard to focused core input controls. */
     public UiHost clipboard(UiClipboard value) { clipboard = Objects.requireNonNull(value, "clipboard"); return this; }
     public UiClipboard clipboard() { return clipboard; }
+    /** Releases the active UI tree and any resources owned by custom nodes. */
+    public void dispose() { root.dispose(); }
     /** The host-owned notification stack rendered after the UI tree. */
     public UiNotificationCenter notifications() { return notifications; }
     public void showToast(UiToast toast) { notifications.show(toast); }
@@ -285,7 +288,7 @@ public final class UiHost {
         updateHovered(node, x, y, viewportBounds());
     }
     private void updateHovered(Ui.Node node, float x, float y, com.rethinkqaq.configui.core.UiBounds visible) {
-        if (node == null) return;
+        if (node == null || !node.visible()) { if (node != null) clearHovered(node); return; }
         boolean modal = node instanceof UiDialogHost dialogs && dialogs.showingDialog();
         boolean visibleNode = visible.width() > 0 && visible.height() > 0
             && (modal || (visible.intersects(node.bounds()) && visible.contains(x, y)));
@@ -354,7 +357,7 @@ public final class UiHost {
     }
     private boolean click(Ui.Node node, float x, float y, int button,
                           com.rethinkqaq.configui.core.UiBounds visible) {
-        if (node == null) return false;
+        if (node == null || !node.visible()) return false;
         boolean modal = node instanceof UiDialogHost dialogs && dialogs.showingDialog();
         if (visible.width() <= 0 || visible.height() <= 0 || !visible.contains(x, y)
             || (!modal && !visible.intersects(node.bounds()))) return false;
@@ -552,7 +555,7 @@ public final class UiHost {
     }
 
     private Ui.Node findPointerCapture(Ui.Node node) {
-        if (node == null) return null;
+        if (node == null || !node.visible()) return null;
         if (node instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
             return dialogs.dialog() == null ? null : findPointerCapture(dialogs.dialog());
         }
@@ -810,7 +813,7 @@ public final class UiHost {
     }
     private boolean visibleToInput(Ui.Node current, Ui.Node target,
                                    com.rethinkqaq.configui.core.UiBounds visible) {
-        if (current == null || target == null) return false;
+        if (current == null || target == null || !current.visible() || !target.visible()) return false;
         if (current == target) return visible.intersects(current.bounds());
         if (current instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
             return dialogs.dialog() != null && visibleToInput(dialogs.dialog(), target, visible);

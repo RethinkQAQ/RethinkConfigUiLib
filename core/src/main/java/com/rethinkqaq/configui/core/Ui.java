@@ -70,6 +70,7 @@ public final class Ui {
     public static Label label(UiText text) { return new Label(text); }
     /** Creates a platform-neutral one-off custom node. */
     public static UiCustom.Builder custom() { return UiCustom.builder(); }
+    public static UiPreview preview(UiPreview.Renderer renderer) { return new UiPreview(renderer); }
     public static Divider divider() { return new Divider(); }
     public static UiBadge badge(UiText text) { return new UiBadge(text); }
     public static UiGrid grid() { return new UiGrid(); }
@@ -221,22 +222,29 @@ public final class Ui {
         protected float measuredWidth;
         protected float measuredHeight;
         private boolean enabled = true;
+        private boolean visible = true;
         private boolean hovered;
         private boolean focused;
         private long layoutVersion;
         private long lastMotionNanos = System.nanoTime();
         private float hoverProgress;
         private float focusProgress;
+        private boolean mounted;
+        private boolean disposed;
+        private Runnable disposeAction;
 
         public Node enabled(boolean value) { enabled = value; invalidateLayout(); return this; }
         public boolean enabled() { return enabled; }
+        public Node visible(boolean value) { visible = value; if (!value) { hovered = false; focused = false; } invalidateLayout(); return this; }
+        public boolean visible() { return visible; }
         public boolean hovered() { return hovered; }
         public boolean focused() { return focused; }
         public UiBounds bounds() { return bounds; }
+        public void invalidateMeasure() { layoutVersion++; }
         public void invalidateLayout() { layoutVersion++; }
         public long layoutVersion() { return layoutVersion; }
         public void setHovered(boolean value) { hovered = value; }
-        public void setFocused(boolean value) { focused = value; }
+        public void setFocused(boolean value) { focused = visible && value; }
         public float hoverProgress() { return hoverProgress; }
         public float focusProgress() { return focusProgress; }
         public void advanceMotion(long nowNanos, UiTheme theme) {
@@ -275,6 +283,35 @@ public final class Ui {
         public boolean release(float mouseX, float mouseY, int button) { return false; }
         /** Clears transient pointer state when a click replaces the active UI subtree. */
         public void cancelPointerState() { }
+        /** Called when this node becomes part of an active UI tree. Idempotent. */
+        public final void mount() {
+            if (mounted || disposed) return;
+            mounted = true;
+            onMount();
+            if (this instanceof ChildProvider provider) for (Node child : provider.childNodes()) child.mount();
+        }
+        /** Called when this node leaves an active UI tree. Idempotent. */
+        public final void unmount() {
+            if (!mounted) return;
+            if (this instanceof ChildProvider provider) for (Node child : provider.childNodes()) child.unmount();
+            onUnmount();
+            mounted = false;
+        }
+        /** Releases resources owned by this node. Idempotent. */
+        public final void dispose() {
+            if (disposed) return;
+            unmount();
+            if (this instanceof ChildProvider provider) for (Node child : provider.childNodes()) child.dispose();
+            onDispose();
+            if (disposeAction != null) disposeAction.run();
+            disposed = true;
+        }
+        protected void onMount() { }
+        protected void onUnmount() { }
+        protected void onDispose() { }
+        public Node onDispose(Runnable value) { disposeAction = Objects.requireNonNull(value, "dispose"); return this; }
+        public boolean mounted() { return mounted; }
+        public boolean disposed() { return disposed; }
         public boolean focusable() { return false; }
         protected boolean hasVisibleFocus(UiTheme theme) {
             return focusProgress() > .01f && ((theme.palette().focusRing() >>> 24) & 0xFF) > 0;
@@ -294,7 +331,8 @@ public final class Ui {
 
     public abstract static class Container extends Node implements ChildProvider {
         protected final List<Node> children = new ArrayList<>();
-        public Container add(Node child) { children.add(Objects.requireNonNull(child, "child")); invalidateLayout(); return this; }
+        public Container add(Node child) { child = Objects.requireNonNull(child, "child"); children.add(child); if (mounted()) child.mount(); invalidateLayout(); return this; }
+        public boolean remove(Node child) { if (!children.remove(child)) return false; child.dispose(); invalidateLayout(); return true; }
         public List<Node> children() { return List.copyOf(children); }
         @Override public List<Node> childNodes() { return List.copyOf(children); }
         @Override public boolean click(float x, float y, int button) {
@@ -315,7 +353,7 @@ public final class Ui {
         }
         public List<Node> focusableNodes() {
             List<Node> result = new ArrayList<>();
-            for (Node child : children) { if (child.focusable()) result.add(child); if (child instanceof Container container) result.addAll(container.focusableNodes()); }
+            for (Node child : children) { if (child.visible() && child.focusable()) result.add(child); if (child.visible() && child instanceof Container container) result.addAll(container.focusableNodes()); }
             return result;
         }
     }
