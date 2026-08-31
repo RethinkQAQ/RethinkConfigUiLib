@@ -131,6 +131,8 @@ public class UiButton extends Ui.Node {
         return wasPressed;
     }
 
+    @Override public void cancelPointerState() { pressed = false; }
+
     @Override
     public boolean focusable() { return enabled(); }
 }

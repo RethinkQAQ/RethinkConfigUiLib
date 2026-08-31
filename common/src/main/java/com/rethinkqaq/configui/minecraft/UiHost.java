@@ -179,6 +179,17 @@ public final class UiHost {
         if (button == 0) pointerCapture = null;
         boolean handled = click(root, (float) mouseX, (float) mouseY, button, viewportBounds());
         if (handled) pointerCapture = findPointerCapture(root);
+        // A click may open a modal dialog immediately. The release event will then be routed
+        // to the dialog, so release the originating page control now to avoid leaving a button
+        // permanently in its pressed visual state.
+        if (handled && root instanceof UiDialogHost dialogs && dialogs.showingDialog() && pointerCapture != null) {
+            pointerCapture.release((float) mouseX, (float) mouseY, button);
+            pointerCapture = null;
+        }
+        if (handled && root instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
+            cancelPointerState(dialogs.root());
+            pointerCapture = null;
+        }
         if (handled) {
             focusAt((float) mouseX, (float) mouseY);
         } else {
@@ -788,6 +799,14 @@ public final class UiHost {
         com.rethinkqaq.configui.core.UiBounds visible = viewportBounds();
         if (focused != null && (!contains(root, focused) || !visibleToInput(root, focused, visible))) setFocus(null);
         if (pointerCapture != null && !contains(root, pointerCapture)) pointerCapture = null;
+    }
+
+    private void cancelPointerState(Ui.Node node) {
+        if (node == null) return;
+        node.cancelPointerState();
+        if (node instanceof Ui.Tooltip tooltip) cancelPointerState(tooltip.child());
+        if (node instanceof Ui.ChildProvider provider) for (Ui.Node child : provider.childNodes()) cancelPointerState(child);
+        if (node instanceof Ui.Container container) for (Ui.Node child : container.children()) cancelPointerState(child);
     }
     private boolean visibleToInput(Ui.Node current, Ui.Node target,
                                    com.rethinkqaq.configui.core.UiBounds visible) {

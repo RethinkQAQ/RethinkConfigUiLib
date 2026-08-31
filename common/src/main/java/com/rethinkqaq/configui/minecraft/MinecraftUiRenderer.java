@@ -164,8 +164,8 @@ public final class MinecraftUiRenderer implements UiRenderer {
     }
     @Override public void popOverlay() {
         //? if >=1.21.6 {
-        /*graphics.pose().popMatrix();
-        *///?} else {
+        /* */
+        //?} else {
         graphics.pose().popPose();
         //?}
     }

@@ -64,6 +64,7 @@ public final class UiDialogHost extends Ui.Node implements Ui.ChildProvider, Ui.
     }
 
     public void show(Ui.Node value) {
+        if (dialog != null) dialog.cancelPointerState();
         dialog = Objects.requireNonNull(value, "dialog");
         invalidateLayout();
     }

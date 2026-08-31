@@ -273,6 +273,8 @@ public final class Ui {
         /** Receives one Unicode code point; hosts normalize version-specific events before this call. */
         public boolean textInput(UiTextInput event, UiClipboard clipboard) { return false; }
         public boolean release(float mouseX, float mouseY, int button) { return false; }
+        /** Clears transient pointer state when a click replaces the active UI subtree. */
+        public void cancelPointerState() { }
         public boolean focusable() { return false; }
         protected boolean hasVisibleFocus(UiTheme theme) {
             return focusProgress() > .01f && ((theme.palette().focusRing() >>> 24) & 0xFF) > 0;
