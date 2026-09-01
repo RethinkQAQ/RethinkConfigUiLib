@@ -7,6 +7,8 @@ tag="${VERSION:?JitPack VERSION is not set}"
 release_base_url="${RCUI_RELEASE_BASE_URL:-https://github.com/RethinkQAQ/RethinkConfigUiLib/releases/download}"
 release_url="${release_base_url%/}/${tag}"
 repository="${HOME}/.m2/repository/${group_path}"
+project_output="${PWD}/build/libs"
+mkdir -p "${project_output}"
 manifest="$(mktemp)"
 trap 'rm -f "${manifest}"' EXIT
 
@@ -34,4 +36,9 @@ while read -r minecraft platform file sha256; do
   <licenses><license><name>GNU Lesser General Public License v3.0 only</name><url>https://www.gnu.org/licenses/lgpl-3.0.html</url></license></licenses>
 </project>
 EOF
+  # JitPack also requires build outputs to exist inside the checked-out
+  # project. Keep the Maven-local copy above for the requested coordinates,
+  # and expose the same verified files for JitPack's artifact scanner.
+  cp "${jar}" "${project_output}/${artifact_id}.jar"
+  cp "${dir}/${artifact_id}-${tag}.pom" "${project_output}/${artifact_id}.pom"
 done < <(tail -n +2 "${manifest}")
