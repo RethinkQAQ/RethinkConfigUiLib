@@ -159,9 +159,9 @@ bootstraps: it registers no content, events, Mixins, or Screen replacements.
 
 ## JitPack dependency
 
-Each release also publishes one universal Maven artifact per Minecraft version
-through JitPack. Add JitPack after the normal repositories and use the release
-tag as the dependency version:
+Each release publishes one artifact per loader and Minecraft version through
+JitPack. Add JitPack after the normal repositories and use the release tag as
+the dependency version:
 
 ```kotlin
 repositories {
@@ -170,13 +170,12 @@ repositories {
 }
 
 val rcui =
-    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-mc1.21.1:v0.1.2"
+    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-1.21.1-fabric:v0.7.0"
 ```
 
-The artifact ID must match the host's Minecraft version, for example
-`rethink-config-ui-lib-mc1.21.1` or `rethink-config-ui-lib-mc26.2`.
-Use `compileOnly(rcui)` in a shared/common source set and embed the same
-dependency from the loader source set:
+Use the artifact matching the host loader and Minecraft version. A shared
+common source set may use the Fabric artifact as `compileOnly`; each loader
+must embed its own platform artifact:
 
 ```kotlin
 // Fabric
@@ -192,7 +191,8 @@ dependencies {
 ```
 
 All host mods should use the same RCUI tag and the artifact matching their
-Minecraft version.
+loader and Minecraft version. Release assets are built and verified before the
+GitHub Release is created; JitPack only installs those platform artifacts.
 
 ## Built-in demo
 

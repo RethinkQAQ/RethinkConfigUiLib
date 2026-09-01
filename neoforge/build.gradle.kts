@@ -78,6 +78,22 @@ afterEvaluate {
     }
 }
 
+val prepareReleaseJar = tasks.register("prepareReleaseJar") {
+    group = "build"
+    description = "Copies the selected neoforge production JAR to the public release name."
+    dependsOn("build")
+    doLast {
+        val libs = layout.buildDirectory.dir("libs").get().asFile
+        val candidates = libs.listFiles().orEmpty().filter { file ->
+            file.extension == "jar" && file.name != "rethink-config-ui-lib-${commonMod.mc}-neoforge.jar" &&
+                !file.name.contains("sources") && !file.name.contains("javadoc") &&
+                !file.name.contains("dev") && !file.name.contains("slim")
+        }.sortedByDescending { it.lastModified() }
+        val selected = candidates.firstOrNull() ?: error("No neoforge production JAR found in ${libs.path}")
+        selected.copyTo(libs.resolve("rethink-config-ui-lib-${commonMod.mc}-neoforge.jar"), overwrite = true)
+    }
+}
+
 neoForge {
     version = commonMod.dep("neoforge")
     accessTransformers.from(project.file("build/resources/main/META-INF/accesstransformer.cfg"))

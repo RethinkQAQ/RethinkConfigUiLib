@@ -1,8 +1,15 @@
 name: Release Mod Template
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing tag to build and publish
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,6 +17,9 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/build-mods.yml
+    with:
+      release: true
+      release_tag: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
   github-release:
     needs: build
@@ -21,7 +31,7 @@ jobs:
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.jar
+          files: artifacts/**/*
 
   # Temporarily disabled: publishing to Modrinth and CurseForge is opt-in.
   # Re-enable this job when the corresponding project IDs and tokens are configured.

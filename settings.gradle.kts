@@ -162,16 +162,15 @@ gradle.projectsLoaded {
         dependsOn(validateVersionProperties)
         dependsOn(validateLicenseFile)
     }
-    rootProject.tasks.register("collectJars", Copy::class.java) {
+    rootProject.tasks.register("collectPlatformJars", Copy::class.java) {
         group = "build"
         dependsOn(rootProject.tasks.named("build"))
-        into(rootProject.layout.buildDirectory.dir("mod-jars"))
+        into(rootProject.layout.buildDirectory.dir("platform-jars"))
         platformVersions.forEach { (platform, versions) ->
             versions.forEach { version ->
                 val candidate = rootProject.project(":$platform:$version")
                 from(candidate.layout.buildDirectory.dir("libs")) {
-                    include("*.jar")
-                    exclude("*-sources.jar", "*-javadoc.jar", "*-dev.jar", "*-slim.jar")
+                    include("rethink-config-ui-lib-$version-$platform.jar")
                 }
             }
         }
@@ -183,72 +182,42 @@ gradle.projectsLoaded {
         providers.gradleProperty("mod.version").get(),
         providers.gradleProperty("build.number").orNull?.trim()?.takeIf(String::isNotEmpty)
     ).joinToString("-")
-    val universalJarTasks = platformVersions.values.flatten().distinct().map { minecraftVersion ->
-        val platforms = listOf("fabric", "forge", "neoforge")
-            .filter { platform -> platformVersions[platform]?.contains(minecraftVersion) == true }
-        val taskName = "universalJar${minecraftVersion.replace('.', '_')}"
-        rootProject.tasks.register(taskName, Jar::class.java) {
-            group = "build"
-            description = "Builds one experimental universal RCUI JAR for Minecraft $minecraftVersion."
-            dependsOn(platforms.map { platform -> ":$platform:$minecraftVersion:build" })
-            destinationDirectory.set(rootProject.layout.buildDirectory.dir("libs"))
-            archiveFileName.set("$artifactBase-$buildVersion-mc$minecraftVersion.jar")
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-            platforms.forEach { platform ->
-                val candidate = rootProject.project(":$platform:$minecraftVersion")
-                val sourceName = when {
-                    platform == "forge" && minecraftVersion in setOf("1.20.1", "1.20.4") ->
-                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-all-all.jar"
-                    platform == "forge" ->
-                        "$artifactBase-$buildVersion-mc$minecraftVersion-$platform-all.jar"
-                    else -> "$artifactBase-$buildVersion-mc$minecraftVersion-$platform.jar"
-                }
-                from(rootProject.zipTree(candidate.layout.buildDirectory.file("libs/$sourceName")))
-            }
+    val platformReleaseTasks = platformVersions.flatMap { (platform, versions) ->
+        versions.map { version -> ":$platform:$version:prepareReleaseJar" }
+    }
+    rootProject.tasks.named("collectPlatformJars") {
+        dependsOn(platformReleaseTasks)
+    }
+    rootProject.tasks.register("verifyPlatformJars") {
+        group = "verification"
+        dependsOn(platformReleaseTasks)
+        doLast {
+            platformVersions.forEach { (platform, versions) -> versions.forEach { version ->
+                val jar = rootProject.project(":$platform:$version").layout.buildDirectory.file(
+                    "libs/$artifactBase-$version-$platform.jar"
+                ).get().asFile
+                check(jar.isFile) { "Missing release JAR: ${jar.path}" }
+                check(!jar.name.contains("slim") && !jar.name.contains("all-all")) { "Invalid public JAR name: ${jar.name}" }
+            }}
         }
     }
-    rootProject.tasks.register("assembleUniversalJars") {
+    rootProject.tasks.register("generateReleaseManifest") {
         group = "build"
-        description = "Builds one experimental universal JAR for each supported Minecraft version."
-        dependsOn(universalJarTasks)
-    }
-    rootProject.pluginManager.apply("maven-publish")
-    rootProject.extensions.configure<PublishingExtension> {
-        publications {
-            supportedVersions.forEach { minecraftVersion ->
-                val publicationName = "universalMc" + minecraftVersion.replace('.', '_')
-                create<MavenPublication>(publicationName) {
-                    groupId = "com.github.RethinkQAQ.RethinkConfigUiLib"
-                    artifactId = "$artifactBase-mc$minecraftVersion"
-                    version = providers.gradleProperty("jitpack.version")
-                        .orElse(providers.gradleProperty("mod.version"))
-                        .get()
-
-                    val universalJar = rootProject.layout.buildDirectory.file(
-                        "libs/$artifactBase-$buildVersion-mc$minecraftVersion.jar"
-                    )
-                    artifact(universalJar) {
-                        builtBy(rootProject.tasks.named("universalJar${minecraftVersion.replace('.', '_')}"))
-                    }
-
-                    pom {
-                        name = "Rethink Config UI Lib for Minecraft $minecraftVersion"
-                        description = providers.gradleProperty("mod.description").orNull
-                        url = "https://github.com/RethinkQAQ/RethinkConfigUiLib"
-                        licenses {
-                            license {
-                                name = "GNU Lesser General Public License v3.0 only"
-                                url = "https://www.gnu.org/licenses/lgpl-3.0.html"
-                            }
-                        }
-                    }
-                }
+        dependsOn("verifyPlatformJars")
+        doLast {
+            val output = rootProject.layout.buildDirectory.dir("release").get().asFile.apply { mkdirs() }
+            val lines = buildList {
+                add("Tag: ${providers.gradleProperty("release.tag").orNull?.takeIf { it.isNotBlank() } ?: "local"}")
+                platformVersions.forEach { (platform, versions) -> versions.forEach { version ->
+                    val path = rootProject.project(":$platform:$version").layout.buildDirectory.file("libs/$artifactBase-$version-$platform.jar").get().asFile
+                    val digest = java.security.MessageDigest.getInstance("SHA-256").digest(path.readBytes()).joinToString("") { "%02x".format(it) }
+                    add("$version $platform ${path.name} $digest")
+                    path.copyTo(output.resolve(path.name), overwrite = true)
+                    output.resolve("${path.name}.sha256").writeText("$digest  ${path.name}\n")
+                }}
             }
+            output.resolve("rcui-release-manifest.txt").writeText(lines.joinToString(System.lineSeparator()) + System.lineSeparator())
         }
-    }
-    rootProject.tasks.named("publishToMavenLocal") {
-        dependsOn("assembleUniversalJars")
     }
     rootProject.tasks.register("licenseFormat") {
         group = "formatting"
