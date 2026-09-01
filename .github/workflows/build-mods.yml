@@ -89,7 +89,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mod-jars
-          path: platform-artifacts/*.jar
+          path: platform-artifacts/**
           if-no-files-found: error
 
       - name: Upload release staging artifact
@@ -97,5 +97,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version.outputs.artifact_name }}
-          path: platform-artifacts/*.jar
+          path: platform-artifacts/**
           if-no-files-found: error
