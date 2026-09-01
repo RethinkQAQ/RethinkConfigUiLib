@@ -170,7 +170,7 @@ repositories {
 }
 
 val rcui =
-    "com.github.RethinkQAQ.RethinkConfigUiLib:rethink-config-ui-lib-1.21.1-fabric:v0.7.0"
+    "com.github.RethinkQAQ:rethink-config-ui-lib-1.21.1-fabric:v0.7.2"
 ```
 
 Use the artifact matching the host loader and Minecraft version. A shared

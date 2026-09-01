@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-group_id="com.github.RethinkQAQ.RethinkConfigUiLib"
+group_id="com.github.RethinkQAQ"
 group_path="${group_id//.//}"
 tag="${VERSION:?JitPack VERSION is not set}"
 release_base_url="${RCUI_RELEASE_BASE_URL:-https://github.com/RethinkQAQ/RethinkConfigUiLib/releases/download}"
