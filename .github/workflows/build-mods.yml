@@ -40,12 +40,17 @@ jobs:
         id: version
         shell: bash
         run: |
+          build_version="$(grep '^mod.version=' gradle.properties | cut -d= -f2-)"
+          [[ -n "$build_version" ]] || { echo "mod.version is missing" >&2; exit 1; }
+          [[ "$build_version" != v* ]] || { echo "mod.version must not include the Git tag v prefix" >&2; exit 1; }
+          echo "BUILD_VERSION=$build_version" >> "$GITHUB_ENV"
           if [[ "${{ inputs.release }}" == "true" ]]; then
-            echo "BUILD_VERSION=${{ inputs.release_tag }}" | sed 's/^v//' >> "$GITHUB_ENV"
             echo "BUILD_SUFFIX=" >> "$GITHUB_ENV"
           else
-            echo "BUILD_VERSION=$(grep '^mod.version=' gradle.properties | cut -d= -f2-)" >> "$GITHUB_ENV"
             echo "BUILD_SUFFIX=build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          fi
+          if [[ "${{ inputs.release }}" == "true" && -n "${{ inputs.release_tag }}" ]]; then
+            [[ "${{ inputs.release_tag }}" == v* ]] || { echo "release_tag must be a Git tag such as v0.7.4" >&2; exit 1; }
           fi
           echo "artifact_name=mod-jars-staging" >> "$GITHUB_OUTPUT"
 
