@@ -39,8 +39,10 @@ public final class UiHeader extends Ui.Node {
     private float titleGap = 6;
     private float titleScale = 1.25f;
     private float subtitleScale = .9f;
-    private UiTextStyle titleStyle = UiTextStyle.title();
-    private UiTextStyle subtitleStyle = UiTextStyle.subtitle();
+    // Preserve the pre-style API defaults while allowing callers to override the
+    // complete style independently of the header component.
+    private UiTextStyle titleStyle = UiTextStyle.title().scale(1.25f);
+    private UiTextStyle subtitleStyle = UiTextStyle.subtitle().scale(.9f);
     private Integer titleColor;
     private Integer subtitleColor;
     private UiHeaderStyle resolvedStyle = style;
