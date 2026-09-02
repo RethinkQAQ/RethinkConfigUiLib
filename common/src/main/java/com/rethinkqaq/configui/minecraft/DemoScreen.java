@@ -20,13 +20,22 @@ package com.rethinkqaq.configui.minecraft;
 
 import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBadge;
+import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiBinding;
+import com.rethinkqaq.configui.core.UiBounds;
+import com.rethinkqaq.configui.core.UiCrossAxisAlignment;
+import com.rethinkqaq.configui.core.UiDensity;
 import com.rethinkqaq.configui.core.UiDialogHost;
 import com.rethinkqaq.configui.core.UiGrid;
+import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiPageHost;
+import com.rethinkqaq.configui.core.UiPreview;
 import com.rethinkqaq.configui.core.UiPreviewCard;
+import com.rethinkqaq.configui.core.UiScaffold;
+import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
+import com.rethinkqaq.configui.core.component.UiComponent;
 import com.rethinkqaq.configui.core.layout.UiHeader;
 import com.rethinkqaq.configui.core.layout.UiHeaderStyle;
 import com.rethinkqaq.configui.core.layout.UiTemplate;
@@ -68,8 +77,16 @@ public final class DemoScreen extends UiScreen {
         UiDialogHost dialogs = Ui.dialogHost();
         UiPageHost pages = Ui.pageHost();
         pages.addPage(UiText.literal("General"), generalPage(enabled, scale, mode, host, dialogs))
+            .addPage(UiText.literal("Content"), contentPage())
+            .addPage(UiText.literal("Layout"), layoutPage())
+            .addPage(UiText.literal("Navigation"), navigationPage())
+            .addPage(UiText.literal("Input"), inputPage())
+            .addPage(UiText.literal("Data"), dataPage(dialogs))
+            .addPage(UiText.literal("Feedback"), feedbackPage(host, dialogs))
             .addPage(UiText.literal("Preview"), previewPage(dialogs))
-            .addPage(UiText.literal("Advanced"), advancedPage());
+            .addPage(UiText.literal("Themes"), themesPage(host))
+            .addPage(UiText.literal("Templates"), templatesPage(dialogs))
+            .addPage(UiText.literal("Custom"), advancedPage());
 
         Ui.Row footer = Ui.row().gap(8)
             .add(Ui.button(UiText.literal("Reset demo"), () -> { }).variant(Ui.ButtonVariant.SECONDARY))
@@ -84,6 +101,287 @@ public final class DemoScreen extends UiScreen {
             .regionGap(12)
             .build();
         return dialogs.root(template);
+    }
+
+    private static Ui.Node contentPage() {
+        return Ui.column().gap(14)
+            .add(Ui.textHeader(UiText.literal("Content components"))
+                .subtitle(UiText.literal("Text, status, grouping and preview surfaces"))
+                .style(UiHeaderStyle.COMPACT))
+            .add(Ui.section(UiText.literal("TEXT AND STATUS"))
+                .add(Ui.label(UiText.literal("UiLabel renders ordinary body text and can wrap to a bounded number of lines."))
+                    .wrap(true))
+                .add(Ui.label(UiText.literal("Title and subtitle are composed with UiHeader.")))
+                .add(Ui.row().gap(8)
+                    .add(Ui.badge(UiText.literal("NEUTRAL")))
+                    .add(Ui.badge(UiText.literal("ACCENT")).tone(UiBadge.Tone.ACCENT))
+                    .add(Ui.badge(UiText.literal("SUCCESS")).tone(UiBadge.Tone.SUCCESS))
+                    .add(Ui.badge(UiText.literal("WARNING")).tone(UiBadge.Tone.WARNING))
+                    .add(Ui.badge(UiText.literal("DANGER")).tone(UiBadge.Tone.DANGER)))
+                .add(Ui.divider())
+                .add(Ui.label(UiText.literal("UiDivider separates related groups without introducing business logic."))))
+            .add(Ui.panel().padding(12)
+                .add(Ui.section(UiText.literal("PANEL AND SECTION"))
+                    .add(Ui.label(UiText.literal("UiPanel supplies a surface; UiSection adds a titled content group.")))))
+            .add(Ui.previewCard(UiText.literal("Preview card"), Ui.preview((renderer, bounds, clip, theme) -> {
+                renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), theme.palette().accent());
+            }).preferredHeight(64))
+                .description(UiText.literal("Preview area plus an optional action row."))
+                .action(Ui.button(UiText.literal("Action"), () -> { })))
+            .add(Ui.label(UiText.literal("The Footer is configured as a template slot using any Ui.Node, usually a UiRow."))
+                .wrap(true));
+    }
+
+    private static Ui.Node layoutPage() {
+        Ui.Node split = Ui.split(
+            Ui.panel().padding(10).add(Ui.label(UiText.literal("Primary"))),
+            Ui.panel().padding(10).add(Ui.label(UiText.literal("Secondary"))))
+            .primaryShare(.62f).gap(10).compactBelow(620);
+        Ui.Column scrollContent = Ui.column().gap(6);
+        for (int i = 1; i <= 8; i++) scrollContent.add(Ui.label(UiText.literal("Scrollable row " + i)));
+        return Ui.column().gap(14)
+            .add(Ui.section(UiText.literal("FLOW AND ALIGNMENT"))
+                .add(Ui.row().gap(8).mainAxisAlignment(UiMainAxisAlignment.SPACE_BETWEEN)
+                    .add(Ui.badge(UiText.literal("START")))
+                    .add(Ui.badge(UiText.literal("SPACE_BETWEEN")).tone(UiBadge.Tone.ACCENT))
+                    .add(Ui.badge(UiText.literal("END"))))
+                .add(Ui.row().gap(8).crossAxisAlignment(UiCrossAxisAlignment.CENTER)
+                    .add(Ui.button(UiText.literal("Row"), () -> { }))
+                    .add(Ui.column().gap(4).add(Ui.label(UiText.literal("Column"))).add(Ui.divider())))
+                .add(Ui.stack()
+                    .add(Ui.custom().preferredHeight(42)
+                        .render((renderer, bounds, theme) -> renderer.fillRoundRect(bounds,
+                            theme.metrics().controlRadius(), theme.palette().surfaceRaised()))
+                        .build())
+                    .add(Ui.badge(UiText.literal("Stacked")))))
+            .add(Ui.section(UiText.literal("GRID AND SPLIT"))
+                .add(Ui.grid().minimumColumnWidth(110).maximumColumnWidth(160).gap(8)
+                    .rowAlignment(UiMainAxisAlignment.CENTER)
+                    .add(layoutBox())
+                    .add(layoutBox())
+                    .add(layoutBox()))
+                .add(split))
+            .add(Ui.section(UiText.literal("SCROLL VIEW"))
+                .add(new FixedViewport(Ui.scrollView(scrollContent), 90)));
+    }
+
+    private static Ui.Node layoutBox() {
+        return Ui.custom().preferredHeight(36)
+            .render((renderer, bounds, theme) -> renderer.fillRoundRect(bounds,
+                theme.metrics().controlRadius(), theme.palette().surfaceRaised()))
+            .build();
+    }
+
+    private static Ui.Node navigationPage() {
+        UiPageHost nested = Ui.pageHost()
+            .addPage(UiText.literal("First"), Ui.section(UiText.literal("FIRST PAGE"))
+                .add(Ui.label(UiText.literal("UiPageHost owns pages and exposes a reusable navigation node."))))
+            .addPage(UiText.literal("Second"), Ui.section(UiText.literal("SECOND PAGE"))
+                .add(Ui.label(UiText.literal("Switch pages with the navigation bar."))));
+        Ui.Row footer = Ui.row().gap(8)
+            .add(Ui.button(UiText.literal("Secondary"), () -> { }).variant(Ui.ButtonVariant.SECONDARY))
+            .add(Ui.button(UiText.literal("Primary"), () -> { }));
+        UiTemplate template = Ui.template()
+            .header(UiText.literal("Template shell"), UiHeaderStyle.COMPACT)
+            .navigation(nested.navigation())
+            .content(nested)
+            .footer(footer)
+            .footerAlignment(UiMainAxisAlignment.END)
+            .footerDivider(true)
+            .build();
+        return Ui.column().gap(12)
+            .add(Ui.label(UiText.literal("UiTemplate composes Header, Navigation, Content and Footer.")))
+            .add(template);
+    }
+
+    private static Ui.Node inputPage() {
+        AtomicReference<Boolean> toggle = new AtomicReference<>(false);
+        AtomicReference<Double> value = new AtomicReference<>(.5);
+        AtomicReference<String> text = new AtomicReference<>("");
+        UiSetting<Double> setting = UiSetting.of(binding(value::get, value::set), .5);
+        UiNumberSpec<Double> spec = UiNumberSpec.builder(UiNumberSpec.DOUBLE).range(0, 1).step(.1).build();
+        return Ui.column().gap(14)
+            .add(Ui.section(UiText.literal("BUTTONS"))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Primary"), () -> { }))
+                    .add(Ui.button(UiText.literal("Secondary"), () -> { }).variant(Ui.ButtonVariant.SECONDARY))
+                    .add(Ui.button(UiText.literal("Outline"), () -> { }).variant(Ui.ButtonVariant.OUTLINE))
+                    .add(Ui.button(UiText.literal("Danger"), () -> { }).variant(Ui.ButtonVariant.DANGER))
+                    .add(Ui.iconButton(UiText.literal("+"), () -> { }))
+                    .add(Ui.button(UiText.literal("Disabled"), () -> { }).enabled(false))))
+            .add(Ui.section(UiText.literal("TOGGLE AND SELECT"))
+                .add(Ui.toggle(UiText.literal("Enable feature"), binding(toggle::get, toggle::set)))
+                .add(Ui.select(UiText.literal("Mode"), binding(() -> "Balanced", ignored -> { }),
+                    List.of("Fast", "Balanced", "Quality"), UiText::literal)))
+            .add(Ui.section(UiText.literal("NUMERIC INPUT"))
+                .add(Ui.slider(UiText.literal("Slider"), binding(value::get, value::set), 0, 1, .1))
+                .add(Ui.numberControl(setting, spec))
+                .add(Ui.numericField(setting, spec)))
+            .add(Ui.section(UiText.literal("TEXT INPUT"))
+                .add(Ui.textField(binding(text::get, text::set)).placeholder(UiText.literal("TextField")))
+                .add(Ui.searchField(binding(text::get, text::set)).placeholder(UiText.literal("SearchField")))
+                .add(Ui.formField(UiText.literal("FormField"), Ui.textField(binding(text::get, text::set)))));
+    }
+
+    private static Ui.Node dataPage(UiDialogHost dialogs) {
+        AtomicReference<String> selected = new AtomicReference<>("Two");
+        AtomicReference<List<String>> entries = new AtomicReference<>(List.of("alpha", "beta"));
+        UiListEntryAdapter<String> adapter = UiListEntryAdapter.builder(
+            () -> "", UiText::literal,
+            value -> Ui.textField(value).placeholder(UiText.literal("value"))).build();
+        return Ui.column().gap(14)
+            .add(Ui.section(UiText.literal("SELECTION LIST"))
+                .add(Ui.selectionList(() -> List.of("One", "Two", "Three"),
+                    binding(selected::get, selected::set), UiText::literal)))
+            .add(Ui.section(UiText.literal("COLLECTION EDITOR"))
+                .add(Ui.collectionEditor(dialogs, UiText.literal("Entries"),
+                    UiListSetting.of(UiSetting.of(binding(entries::get, entries::set), List.of())), adapter)))
+            .add(Ui.label(UiText.literal("ListEntryAdapter supplies the editor and validation contract for collection values."))
+                .wrap(true));
+    }
+
+    private static Ui.Node feedbackPage(AtomicReference<UiHost> host, UiDialogHost dialogs) {
+        return Ui.column().gap(14)
+            .add(Ui.section(UiText.literal("ALERTS"))
+                .add(Ui.alert(UiFeedbackType.INFO, UiText.literal("Information")))
+                .add(Ui.alert(UiFeedbackType.SUCCESS, UiText.literal("Success")))
+                .add(Ui.alert(UiFeedbackType.WARNING, UiText.literal("Warning")))
+                .add(Ui.alert(UiFeedbackType.ERROR, UiText.literal("Error"))))
+            .add(Ui.section(UiText.literal("TOOLTIPS AND TOASTS"))
+                .add(Ui.tooltip(Ui.button(UiText.literal("Hover me"), () -> { }),
+                    UiText.literal("Tooltip content stays above normal content.")))
+                .add(Ui.tooltip(Ui.badge(UiText.literal("Rich tooltip")),
+                    Ui.panel().padding(8).add(Ui.label(UiText.literal("TooltipContent can contain nodes.")))))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Show toast"), () -> host.get().showToast(UiToast.success(UiText.literal("Toast notification")))))
+                    .add(Ui.button(UiText.literal("Clear toasts"), () -> host.get().notifications().clear()).variant(Ui.ButtonVariant.SECONDARY))))
+            .add(Ui.button(UiText.literal("Open dialog"), () -> dialogs.show(dialogContent(dialogs))));
+    }
+
+    private static Ui.Node themesPage(AtomicReference<UiHost> host) {
+        AtomicReference<UiDensity> density = new AtomicReference<>(UiDensity.NORMAL);
+        UiTheme blue = UiTheme.custom(
+            UiTheme.UiPalette.builder()
+                .background(0xFF111827).surfaceRaised(0xFF1F2937).control(0xFF374151)
+                .controlHover(0xFF4B5563).controlPressed(0xFF6B7280).controlDisabled(0xFF374151)
+                .accent(0xFF60A5FA).accentHover(0xFF93C5FD).accentPressed(0xFF3B82F6)
+                .onAccent(0xFF0F172A).textPrimary(0xFFF9FAFB).textSecondary(0xFFD1D5DB)
+                .textDisabled(0xFF9CA3AF).border(0xFF4B5563).focusRing(0xFF93C5FD)
+                .success(0xFF34D399).warning(0xFFFBBF24).danger(0xFFF87171).build(),
+            new UiTheme.UiMetrics(9, 8, 11, 34, 1));
+        return Ui.column().gap(14)
+            .add(Ui.label(UiText.literal("Themes provide semantic visual tokens; they do not add business logic or change layout contracts."))
+                .wrap(true))
+            .add(themeSwatch("roseLight", UiTheme.roseLight()))
+            .add(themeSwatch("roseDark", UiTheme.roseDark()))
+            .add(themeSwatch("custom dark blue", blue))
+            .add(Ui.section(UiText.literal("INTERACTIVE STATES"))
+                .add(themeStateRow("roseLight states", UiTheme.roseLight()))
+                .add(themeStateRow("dark blue states", blue))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Disabled action"), () -> { }).enabled(false))
+                    .add(Ui.previewCard(UiText.literal("Selected preview"),
+                            Ui.preview((renderer, bounds, clip, theme) -> renderer.fillRoundRect(bounds,
+                                theme.metrics().controlRadius(), theme.palette().accent()))
+                            .preferredHeight(42))
+                        .selected(() -> true))))
+            .add(Ui.section(UiText.literal("BACKGROUND AND DENSITY"))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Opaque"),
+                        () -> host.get().background(UiBackground.opaque(0xFF202124)))
+                        .variant(Ui.ButtonVariant.SECONDARY))
+                    .add(Ui.button(UiText.literal("Translucent"),
+                        () -> host.get().background(UiBackground.translucent(0xFF202124, .78f)))
+                        .variant(Ui.ButtonVariant.SECONDARY))
+                    .add(Ui.button(UiText.literal("Transparent"),
+                        () -> host.get().background(UiBackground.transparent()))
+                        .variant(Ui.ButtonVariant.SECONDARY)))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Comfortable"), () -> {
+                        density.set(UiDensity.COMFORTABLE);
+                        host.get().scalePolicy(UiScalePolicy.fixed(UiDensity.COMFORTABLE));
+                    }))
+                    .add(Ui.button(UiText.literal("Normal"), () -> {
+                        density.set(UiDensity.NORMAL);
+                        host.get().scalePolicy(UiScalePolicy.fixed(UiDensity.NORMAL));
+                    }).variant(Ui.ButtonVariant.SECONDARY))
+                    .add(Ui.button(UiText.literal("Compact"), () -> {
+                        density.set(UiDensity.COMPACT);
+                        host.get().scalePolicy(UiScalePolicy.fixed(UiDensity.COMPACT));
+                    }).variant(Ui.ButtonVariant.SECONDARY)))
+                .add(Ui.custom().preferredHeight(24)
+                    .render((renderer, bounds, theme) -> renderer.drawText(
+                        UiText.literal("Selected density: " + density.get()), bounds.x(), bounds.y(),
+                        theme.palette().textSecondary()))
+                    .build()))
+            .add(Ui.section(UiText.literal("DENSITY"))
+                .add(Ui.row().gap(8)
+                    .add(Ui.badge(UiText.literal("COMFORTABLE")))
+                    .add(Ui.badge(UiText.literal("NORMAL")).tone(UiBadge.Tone.ACCENT))
+                    .add(Ui.badge(UiText.literal("COMPACT")).tone(UiBadge.Tone.SUCCESS))))
+            .add(Ui.label(UiText.literal("Try the states on the Input and Feedback pages while changing Minecraft GUI Scale."))
+                .wrap(true));
+    }
+
+    private static Ui.Node themeStateRow(String title, UiTheme theme) {
+        int[] colors = {
+            theme.palette().control(), theme.palette().controlHover(),
+            theme.palette().controlPressed(), theme.palette().focusRing(),
+            theme.palette().controlDisabled(), theme.palette().accent()
+        };
+        String[] labels = {"normal", "hover", "pressed", "focused", "disabled", "selected"};
+        Ui.Row row = Ui.row().gap(6);
+        for (int index = 0; index < colors.length; index++) {
+            final int color = colors[index];
+            final String label = labels[index];
+            row.add(Ui.custom().preferredWidth(86).preferredHeight(30)
+                .render((renderer, bounds, ignored) -> {
+                    renderer.fillRoundRect(bounds, 6, color);
+                    renderer.drawCenteredText(UiText.literal(label),
+                        bounds.x() + bounds.width() / 2, bounds.y() + 10,
+                        color == theme.palette().controlDisabled()
+                            ? theme.palette().textPrimary() : theme.palette().onAccent());
+                }).build());
+        }
+        return Ui.column().gap(4)
+            .add(Ui.label(UiText.literal(title)))
+            .add(row);
+    }
+
+    private static Ui.Node themeSwatch(String name, UiTheme theme) {
+        return Ui.panel().padding(10)
+            .add(Ui.row().gap(8)
+                .add(Ui.badge(UiText.literal(name)).tone(UiBadge.Tone.ACCENT))
+                .add(Ui.custom().preferredWidth(42).preferredHeight(24)
+                    .render((renderer, bounds, ignored) -> renderer.fillRoundRect(bounds, 6, theme.palette().accent()))
+                    .build())
+                .add(Ui.label(UiText.literal("surface / control / accent"))));
+    }
+
+    private static Ui.Node templatesPage(UiDialogHost dialogs) {
+        UiPageHost sidebarPages = Ui.pageHost()
+            .addPage(UiText.literal("Settings"), Ui.section(UiText.literal("SETTINGS"))
+                .add(Ui.settingRow(UiText.literal("Example"), Ui.toggle(UiText.literal("Enabled"),
+                    UiBinding.of(() -> true, ignored -> { })))))
+            .addPage(UiText.literal("Advanced"), Ui.section(UiText.literal("ADVANCED"))
+                .add(Ui.label(UiText.literal("The sidebar stays fixed while the selected page scrolls."))));
+        UiScaffold sidebar = Ui.scaffold(sidebarPages)
+            .header(UiHeader.compact(UiText.literal("Sidebar template")))
+            .sidebar(sidebarPages.navigation())
+            .footer(Ui.row().add(Ui.button(UiText.literal("Done"), () -> { })))
+            .sidebarWidth(138);
+        UiScaffold editor = Ui.scaffold(
+            Ui.column().gap(8)
+                .add(Ui.row().gap(8).add(Ui.button(UiText.literal("Tool"), () -> { })).add(Ui.badge(UiText.literal("READY"))))
+                .add(Ui.split(Ui.panel().padding(10).add(Ui.label(UiText.literal("Editor"))),
+                    Ui.preview((renderer, bounds, clip, theme) -> renderer.fillRoundRect(bounds, 8, theme.palette().accent()))
+                        .preferredWidth(120).preferredHeight(70)).gap(8))
+                .add(Ui.alert(UiFeedbackType.INFO, UiText.literal("Status area"))))
+            .header(UiHeader.text(UiText.literal("Editor template")))
+            .footer(Ui.row().add(Ui.button(UiText.literal("Open dialog"), () -> dialogs.show(dialogContent(dialogs)))));
+        return Ui.column().gap(14)
+            .add(Ui.section(UiText.literal("SIDEBAR CONFIGURATION" )).add(sidebar))
+            .add(Ui.section(UiText.literal("TOOL / EDITOR / STATUS")).add(editor));
     }
 
     private static Ui.Node generalPage(AtomicBoolean enabled, AtomicReference<Double> scale,
@@ -277,6 +575,7 @@ public final class DemoScreen extends UiScreen {
                 .add(Ui.label(UiText.literal("Any core node can be composed into a secondary page."))
                     .wrap(true))
                 .add(Ui.tooltip(customSurface, UiText.literal("A platform-neutral custom node with its own measure, render and click contract.")))
+                .add(new DemoComponent())
                 .add(Ui.button(UiText.literal("Toggle custom visibility"),
                     () -> customSurface.visible(!customSurface.visible())))
                 .add(Ui.label(UiText.literal("Toggle visibility, then hover and click the surface again to verify that hidden nodes do not receive input."))
@@ -295,6 +594,60 @@ public final class DemoScreen extends UiScreen {
                 .add(dynamicNodes))
             .add(disabled)
             .add(Ui.badge(UiText.literal("Theme override ready")).tone(UiBadge.Tone.ACCENT));
+    }
+
+    /** Small reusable state-free component used to document the UiComponent extension point. */
+    private static final class DemoComponent extends UiComponent {
+        private final Ui.Column content = Ui.column().gap(4)
+            .add(Ui.badge(UiText.literal("UiComponent" )).tone(UiBadge.Tone.ACCENT))
+            .add(Ui.label(UiText.literal("Owns a child tree and forwards measure, layout and render."))
+                .wrap(true));
+
+        private DemoComponent() { child(content); }
+
+        @Override
+        protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+            content.measure(renderer, maxWidth, maxHeight, theme);
+            measuredWidth = content.measuredWidth();
+            measuredHeight = content.measuredHeight();
+        }
+
+        @Override
+        public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
+            super.layout(renderer, value, theme);
+            content.layout(renderer, value, theme);
+        }
+
+        @Override
+        public void render(UiRenderer renderer, UiTheme theme) { content.render(renderer, theme); }
+    }
+
+    /** Gives an independently scrolling child a bounded viewport for the layout showcase. */
+    private static final class FixedViewport extends UiComponent {
+        private final Ui.Node content;
+        private final float height;
+
+        private FixedViewport(Ui.Node content, float height) {
+            this.content = child(content);
+            this.height = height;
+        }
+
+        @Override
+        protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+            content.measure(renderer, maxWidth, height, theme);
+            measuredWidth = content.measuredWidth();
+            measuredHeight = Math.min(maxHeight, height);
+        }
+
+        @Override
+        public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
+            super.layout(renderer, value, theme);
+            content.layout(renderer, new UiBounds(value.x(), value.y(), value.width(),
+                Math.min(value.height(), height)), theme);
+        }
+
+        @Override
+        public void render(UiRenderer renderer, UiTheme theme) { content.render(renderer, theme); }
     }
 
     private static <T> UiBinding<T> binding(java.util.function.Supplier<T> getter,
