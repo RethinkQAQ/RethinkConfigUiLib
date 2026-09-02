@@ -28,6 +28,7 @@ import com.rethinkqaq.configui.core.UiKeyEvent;
 import com.rethinkqaq.configui.core.UiMainAxisAlignment;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiPageHost;
+import com.rethinkqaq.configui.core.UiPageRoot;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTextInput;
@@ -40,7 +41,7 @@ import java.util.Objects;
  * A small, reusable page template for configuration screens. The default layout is
  * header, top navigation, independently scrolling content and an optional footer.
  */
-public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
+public final class UiTemplate extends Ui.Node implements Ui.ChildProvider, UiPageRoot {
     private final Ui.Node composed;
     private final UiBackground background;
     private final Slots slots;
@@ -186,6 +187,7 @@ public final class UiTemplate extends Ui.Node implements Ui.ChildProvider {
         UiScaffold scaffold = Ui.scaffold(content)
             .navigationMode(UiScaffold.NavigationMode.TOP)
             .maxContentWidth(options.maxContentWidth());
+        if (options.background() != null) scaffold.background(options.background());
         if (options.regionGap() >= 0) scaffold.regionGap(options.regionGap());
         if (slots.header() != null) scaffold.header(slots.header());
         if (slots.navigation() != null) scaffold.navigation(slots.navigation());

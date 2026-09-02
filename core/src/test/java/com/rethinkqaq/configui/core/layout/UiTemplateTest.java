@@ -28,6 +28,7 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBackground;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiMainAxisAlignment;
+import com.rethinkqaq.configui.core.UiPageHost;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiText;
@@ -75,6 +76,14 @@ class UiTemplateTest {
         layout(template, 800, 200);
         UiScaffold scaffold = (UiScaffold) template.childNodes().get(0);
         assertSame(content, scaffold.content());
+    }
+
+    @Test
+    void pageHostDoesNotWrapTemplatePageRoots() {
+        UiTemplate template = Ui.template().content(Ui.label(UiText.literal("Content"))).build();
+        UiPageHost pages = Ui.pageHost().addPage(UiText.literal("Template"), template);
+
+        assertSame(template, pages.currentPage());
     }
 
     @Test

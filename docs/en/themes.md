@@ -32,6 +32,20 @@ Use withPalette for semantic colours, withMetrics for dimensions, withMotion
 for transitions, and withStates for shared state strengths. withAccent is a
 small shortcut for an accent-only change.
 
+## Typography and text styles
+
+The theme provides fallback text colours, density metrics and component text
+levels. Use `UiTextStyle` when one node needs a different role, scale or
+explicit colour:
+
+```java
+UiTextStyle note = UiTextStyle.secondary().scale(.9f).color(0xFF9CA3AF);
+Ui.Node label = Ui.label(UiText.literal("Optional setting")).textStyle(note);
+```
+
+An unset style colour falls back to the component/theme. A text style does not
+change backgrounds, padding or business behaviour.
+
 ## Create a theme from scratch
 
 UiTheme.custom uses default motion and state visuals:

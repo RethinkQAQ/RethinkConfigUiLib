@@ -16,9 +16,12 @@ For example, a volume slider is a Component. Its colour is provided by the
 Theme. Its position comes from a Template and layout parent. The actual volume
 value belongs to the Host.
 
+For text, `UiText` is the content and `UiTextStyle` is its visual intent. A
+style can be shared by nodes without moving business data into the UI layer.
+
 Do not put configuration saving inside a reusable button. Do not make a theme
 read a Minecraft world. Keeping these responsibilities separate lets the same
-component work in a settings page and an editor.
+component work in a settings page and a custom tool.
 
 ## Nodes form a tree
 

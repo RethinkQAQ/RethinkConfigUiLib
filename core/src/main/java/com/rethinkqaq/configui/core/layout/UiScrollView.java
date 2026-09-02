@@ -23,16 +23,24 @@ import com.rethinkqaq.configui.core.Ui;
 import com.rethinkqaq.configui.core.UiBounds;
 import com.rethinkqaq.configui.core.UiKey;
 import com.rethinkqaq.configui.core.UiKeyEvent;
+import com.rethinkqaq.configui.core.UiPageRoot;
 import com.rethinkqaq.configui.core.UiClipboard;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiTheme;
+
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 /** A single-child scrolling viewport. */
 public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
     private float offset;
     private boolean fillViewportChild;
 
-    public UiScrollView(Ui.Node child) { add(child); }
+    public UiScrollView(Ui.Node child) {
+        add(child);
+        validateNoPageRoot();
+    }
 
     protected Ui.Node child() { return children.get(0); }
     public float offset() { return offset; }
@@ -42,6 +50,7 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
+        validateNoPageRoot();
         child().measure(renderer, maxWidth, Float.MAX_VALUE, theme);
         measuredWidth = child().measuredWidth();
         measuredHeight = Math.min(maxHeight, child().measuredHeight());
@@ -112,5 +121,27 @@ public class UiScrollView extends Ui.Container implements Ui.ClipProvider {
 
     private float contentHeight(float viewportHeight) {
         return fillViewportChild ? Math.max(child().measuredHeight(), viewportHeight) : child().measuredHeight();
+    }
+
+    private void validateNoPageRoot() {
+        UiPageRoot pageRoot = findPageRoot(child(), Collections.newSetFromMap(new IdentityHashMap<>()));
+        if (pageRoot != null) {
+            throw new IllegalArgumentException("UiScrollView cannot contain "
+                + pageRoot.getClass().getSimpleName()
+                + ". UiScaffold and UiTemplate are complete page roots; attach them directly to UiPageHost "
+                + "or move only their content into this scroll view.");
+        }
+    }
+
+    private static UiPageRoot findPageRoot(Ui.Node node, Set<Ui.Node> visited) {
+        if (!visited.add(node)) return null;
+        if (node instanceof UiPageRoot root) return root;
+        if (node instanceof Ui.ChildProvider provider) {
+            for (Ui.Node child : provider.childNodes()) {
+                UiPageRoot result = findPageRoot(child, visited);
+                if (result != null) return result;
+            }
+        }
+        return null;
     }
 }

@@ -43,6 +43,26 @@ public final class UiTextMetrics {
         return renderer.lineHeight(Math.max(0f, scale));
     }
 
+    public static float scale(UiTextStyle style) { return style.scale(); }
+
+    public static float lineHeight(UiRenderer renderer, UiTextStyle style) {
+        return lineHeight(renderer, style.scale());
+    }
+
+    public static float width(UiRenderer renderer, UiText text, UiTextStyle style) {
+        return renderer.textWidth(text, style.scale());
+    }
+
+    public static UiText fit(UiRenderer renderer, UiText text, float width, UiTextStyle style) {
+        return fit(renderer, text, width, style.scale());
+    }
+
+    public static void draw(UiRenderer renderer, UiText text, float x, float y, float width,
+                            UiTextStyle style, int fallbackColor) {
+        draw(renderer, text, x, y, width,
+            style.colorOverride() == null ? fallbackColor : style.colorOverride(), style.scale());
+    }
+
     /** Returns the largest readable scale that keeps text within the available width. */
     public static float fitScale(UiRenderer renderer, UiText text, float width) {
         if (width <= 0 || renderer.textWidth(text) <= 0) return 1f;

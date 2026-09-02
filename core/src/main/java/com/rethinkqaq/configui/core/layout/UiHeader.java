@@ -27,6 +27,7 @@ import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.UiTextMetrics;
+import com.rethinkqaq.configui.core.UiTextStyle;
 
 /** A responsive scaffold header with optional surface chrome. */
 public final class UiHeader extends Ui.Node {
@@ -38,6 +39,8 @@ public final class UiHeader extends Ui.Node {
     private float titleGap = 6;
     private float titleScale = 1.25f;
     private float subtitleScale = .9f;
+    private UiTextStyle titleStyle = UiTextStyle.title();
+    private UiTextStyle subtitleStyle = UiTextStyle.subtitle();
     private Integer titleColor;
     private Integer subtitleColor;
     private UiHeaderStyle resolvedStyle = style;
@@ -84,6 +87,7 @@ public final class UiHeader extends Ui.Node {
     public UiHeader titleScale(float value) {
         if (value <= 0) throw new IllegalArgumentException("title scale must be positive");
         titleScale = value;
+        titleStyle = titleStyle.scale(value);
         invalidateLayout();
         return this;
     }
@@ -91,15 +95,16 @@ public final class UiHeader extends Ui.Node {
     public UiHeader subtitleScale(float value) {
         if (value <= 0) throw new IllegalArgumentException("subtitle scale must be positive");
         subtitleScale = value;
+        subtitleStyle = subtitleStyle.scale(value);
         invalidateLayout();
         return this;
     }
 
     /** Overrides the theme title colour for this header. */
-    public UiHeader titleColor(int value) { titleColor = value; return this; }
+    public UiHeader titleColor(int value) { titleColor = value; titleStyle = titleStyle.color(value); return this; }
 
     /** Overrides the theme subtitle colour for this header. */
-    public UiHeader subtitleColor(int value) { subtitleColor = value; return this; }
+    public UiHeader subtitleColor(int value) { subtitleColor = value; subtitleStyle = subtitleStyle.color(value); return this; }
 
     public UiHeaderStyle style() { return style; }
     public UiHeaderStyle resolvedStyle() { return resolvedStyle; }
@@ -119,8 +124,8 @@ public final class UiHeader extends Ui.Node {
         float densityScale = UiTextMetrics.scale(theme.metrics());
         float padding = padding(theme, resolvedStyle);
         float textWidth = Math.max(0, maxWidth - padding * 2);
-        float effectiveTitleScale = titleScale * densityScale;
-        float effectiveSubtitleScale = subtitleScale * densityScale;
+        float effectiveTitleScale = titleStyle.scale() * densityScale;
+        float effectiveSubtitleScale = subtitleStyle.scale() * densityScale;
         float height = renderer.lineHeight(effectiveTitleScale);
         if (subtitle != null) height += titleGap * densityScale + renderer.lineHeight(effectiveSubtitleScale);
         measuredWidth = Math.min(maxWidth, Math.max(renderer.textWidth(title, effectiveTitleScale),
@@ -143,16 +148,25 @@ public final class UiHeader extends Ui.Node {
         float textWidth = Math.max(0, bounds.width() - padding * 2);
         float x = bounds.x() + padding;
         float y = bounds.y() + padding;
-        float effectiveTitleScale = titleScale * densityScale;
-        float effectiveSubtitleScale = subtitleScale * densityScale;
-        UiText fittedTitle = Ui.fitText(renderer, title, textWidth, effectiveTitleScale);
-        renderer.drawText(fittedTitle, x, y, titleColor == null ? theme.palette().textPrimary() : titleColor, effectiveTitleScale);
+        float effectiveTitleScale = titleStyle.scale() * densityScale;
+        float effectiveSubtitleScale = subtitleStyle.scale() * densityScale;
+        UiText fittedTitle = UiTextMetrics.fit(renderer, title, textWidth, titleStyle.scale() * densityScale);
+        UiTextStyle resolvedTitle = titleStyle.scale(effectiveTitleScale);
+        UiTextMetrics.draw(renderer, fittedTitle, x, y, textWidth, resolvedTitle,
+            titleColor == null ? theme.palette().textPrimary() : titleColor);
         if (subtitle != null) {
-            UiText fittedSubtitle = Ui.fitText(renderer, subtitle, textWidth, effectiveSubtitleScale);
-            renderer.drawText(fittedSubtitle, x, y + renderer.lineHeight(effectiveTitleScale) + titleGap * densityScale,
-                subtitleColor == null ? theme.palette().textSecondary() : subtitleColor, effectiveSubtitleScale);
+            UiText fittedSubtitle = UiTextMetrics.fit(renderer, subtitle, textWidth, effectiveSubtitleScale);
+            UiTextMetrics.draw(renderer, fittedSubtitle, x,
+                y + renderer.lineHeight(effectiveTitleScale) + titleGap * densityScale,
+                textWidth, subtitleStyle.scale(effectiveSubtitleScale),
+                subtitleColor == null ? theme.palette().textSecondary() : subtitleColor);
         }
     }
+
+    public UiHeader titleStyle(UiTextStyle value) { titleStyle = Objects.requireNonNull(value, "titleStyle"); titleScale = value.scale(); invalidateLayout(); return this; }
+    public UiHeader subtitleStyle(UiTextStyle value) { subtitleStyle = Objects.requireNonNull(value, "subtitleStyle"); subtitleScale = value.scale(); invalidateLayout(); return this; }
+    public UiTextStyle titleStyle() { return titleStyle; }
+    public UiTextStyle subtitleStyle() { return subtitleStyle; }
 
     private UiHeaderStyle resolveStyle(float width) {
         if (!responsive) return style;
@@ -184,6 +198,8 @@ public final class UiHeader extends Ui.Node {
         public Builder titleGap(float value) { header.titleGap(value); return this; }
         public Builder titleScale(float value) { header.titleScale(value); return this; }
         public Builder subtitleScale(float value) { header.subtitleScale(value); return this; }
+        public Builder titleStyle(UiTextStyle value) { header.titleStyle(value); return this; }
+        public Builder subtitleStyle(UiTextStyle value) { header.subtitleStyle(value); return this; }
         public Builder titleColor(int value) { header.titleColor(value); return this; }
         public Builder subtitleColor(int value) { header.subtitleColor(value); return this; }
         public UiHeader build() { return header; }

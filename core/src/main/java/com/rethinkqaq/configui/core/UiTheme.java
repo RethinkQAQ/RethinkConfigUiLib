@@ -47,6 +47,11 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiS
 
     public static Builder builder() { return new Builder(); }
 
+    /** Creates a theme from its palette and metrics while using the default motion and states. */
+    public static UiTheme custom(UiPalette palette, UiMetrics metrics) {
+        return builder().palette(palette).metrics(metrics).build();
+    }
+
     /** Default light theme inspired by the project visual direction. */
     public static UiTheme roseLight() { return builder().build(); }
 

@@ -44,6 +44,50 @@ UiPreviewCard card = Ui.previewCard(
 PreviewCard 组合标题、有限大小的预览区、说明文字、选中状态和可选操作。
 适合模型、纹理和预设。预览节点本身不负责管理宿主的模型资源。
 
+## 文本样式
+
+`UiText` 只保存文字内容，`UiTextStyle` 保存可复用的排版和视觉意图。这样
+内容和文字表现彼此独立。
+
+```java
+UiTextStyle title = UiTextStyle.title().scale(1.35f);
+UiTextStyle muted = UiTextStyle.subtitle().scale(.85f).color(0xFF6B7280);
+UiTextStyle success = UiTextStyle.success().color(0xFF3A8F5B);
+
+Ui.Node text = Ui.column()
+    .gap(6)
+    .add(Ui.label(UiText.literal("页面标题")).textStyle(title))
+    .add(Ui.label(UiText.literal("较弱的说明文字")).textStyle(muted))
+    .add(Ui.label(UiText.literal("保存成功")).textStyle(success));
+```
+
+内置语义工厂包括 `title()`、`subtitle()`、`body()`、`secondary()`、
+`button()`、`caption()`、`error()` 和 `success()`。也可以直接使用
+`UiTextStyle.of(UiTextRole.CAPTION)`。样式是不可变对象；`scale(...)`、
+`color(...)`、`role(...)` 和 `overflow(...)` 都会返回新的样式，因此同一个
+样式可以安全地用于多个节点。
+
+```java
+UiTextStyle actionText = UiTextStyle.button().scale(.9f);
+Ui.Node actions = Ui.row()
+    .gap(8)
+    .add(Ui.button(UiText.literal("应用"), this::apply).textStyle(actionText))
+    .add(Ui.button(UiText.literal("取消"), this::cancel).textStyle(actionText));
+```
+
+`scale(...)` 是正数形式的文字大小倍率，密度和组件度量仍会继续生效。
+`color(...)` 是明确的 ARGB 颜色覆盖；不设置时由组件和主题提供默认颜色。
+`overflow(...)` 可以表示 `WRAP`、`ELLIPSIS`、`CLIP` 或 `NO_WRAP`；目前
+`UiLabel` 的换行仍由 `wrap(true)` 和 `maxLines(...)` 控制。文本样式不会修改
+背景、内边距、布局或业务行为。
+
+Header 和按钮也可以分别使用 `titleStyle(...)`、`subtitleStyle(...)` 和
+`textStyle(...)` 设置样式。`Text styles` Demo 页面展示了共享样式、大小差异、
+颜色覆盖、长文本和适配过程。
+
+![文本样式示例](../imags/text-styles.png)
+<!-- TODO: Add a screenshot showing roles, scale, colour overrides and fitting. -->
+
 ## 布局组件
 
 ```java

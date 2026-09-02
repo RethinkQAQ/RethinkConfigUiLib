@@ -1,7 +1,7 @@
 # RCUI Developer Documentation
 
 Rethink Config UI Lib (RCUI) is a Minecraft UI library for configuration
-screens, editors, previews, dashboards, and other custom interfaces.
+screens, previews, dashboards, tools, and other custom interfaces.
 
 RCUI separates four responsibilities:
 
@@ -17,7 +17,7 @@ Host      = your data, persistence and Minecraft integration
 1. [Quick Start](getting-started.md) — install RCUI and open a first screen.
 2. [Concepts](concepts.md) — understand nodes, layout, clipping and lifecycle.
 3. [Configuration](configuration.md) — bind controls to configuration values.
-4. [Templates](templates.md) — build standard, sidebar and editor pages.
+4. [Templates](templates.md) — build top-navigation and sidebar pages.
 5. [Components](components.md) — find the right component and its styling API.
 6. [Themes](themes.md) — use or create a visual theme.
 7. [Custom Components](custom-components.md) — extend RCUI safely.

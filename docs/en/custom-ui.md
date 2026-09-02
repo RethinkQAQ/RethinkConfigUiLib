@@ -1,12 +1,12 @@
 # Fully Custom UI
 
 RCUI is not limited to configuration screens. Templates are optional. You can
-build an editor, dashboard, tool or preview surface directly from nodes.
+build a dashboard, tool or preview surface directly from nodes.
 
 ## When to skip a template
 
 Skip the standard template when the page needs a different composition, such
-as a full-screen canvas, three-pane editor or game-like tool. Keep using a
+as a full-screen canvas, multi-panel tool or game-like interface. Keep using a
 template when the page still has the normal Header/Navigation/Content/Footer
 shape; customization inside Content is usually enough.
 
@@ -56,9 +56,9 @@ treated as Experimental until they are explicitly documented as stable.
 - Dispose resources when the root is closed.
 
 ![Fully custom UI](../imags/custom-ui.png)
-<!-- TODO: Add a screenshot of a non-configuration RCUI editor. -->
+<!-- TODO: Add a screenshot of a non-configuration RCUI interface. -->
 
 ## Demo
 
 The Custom page shows a small custom node tree. Templates and Preview show how
-the same primitives can be used for larger editor-style pages.
+the same primitives can be used for larger custom pages.

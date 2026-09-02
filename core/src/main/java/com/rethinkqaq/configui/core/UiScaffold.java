@@ -28,7 +28,7 @@ import java.util.Objects;
  * A page frame with optional header, sidebar and footer. Content is the only required region;
  * absent regions reserve no space.
  */
-public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider {
+public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider, UiPageRoot {
     private static final float HEADER_HIDE_WIDTH = 360;
     private static final float COMPACT_WIDTH = 760;
     /** Selects which navigation region is active for this frame. */
@@ -39,6 +39,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.Cl
     private Ui.Node navigation;
     private Ui.Node sidebar;
     private Ui.Node footer;
+    private UiBackground background = UiBackground.transparent();
     private NavigationMode navigationMode = NavigationMode.SIDEBAR;
     private float sidebarWidth = 132;
     private float regionGap = -1;
@@ -57,6 +58,8 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.Cl
     public UiScaffold navigationMode(NavigationMode value) { navigationMode = Objects.requireNonNull(value, "navigationMode"); invalidateLayout(); return this; }
     public UiScaffold sidebar(Ui.Node value) { sidebar = Objects.requireNonNull(value, "sidebar"); invalidateLayout(); return this; }
     public UiScaffold footer(Ui.Node value) { footer = Objects.requireNonNull(value, "footer"); invalidateLayout(); return this; }
+    /** Sets an optional surface painted across this complete page frame. Defaults to transparent. */
+    public UiScaffold background(UiBackground value) { background = Objects.requireNonNull(value, "background"); return this; }
     public UiScaffold sidebarWidth(float value) {
         if (value <= 0) throw new IllegalArgumentException("sidebar width must be positive");
         sidebarWidth = value;
@@ -82,6 +85,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.Cl
     public Ui.Node navigation() { return navigation; }
     public Ui.Node sidebar() { return sidebar; }
     public Ui.Node footer() { return footer; }
+    public UiBackground background() { return background; }
     public NavigationMode navigationMode() { return navigationMode; }
     /** Returns whether the optional header is present at the current logical width. */
     public boolean headerVisible() { return headerVisible; }
@@ -175,6 +179,7 @@ public final class UiScaffold extends Ui.Node implements Ui.ChildProvider, Ui.Cl
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
+        if (background.paintsSurface()) renderer.fillRect(bounds(), background.color());
         if (headerVisible) header.render(renderer, theme);
         if (navigationMode == NavigationMode.TOP) {
             if (navigation != null) navigation.render(renderer, theme);

@@ -34,6 +34,7 @@ import com.rethinkqaq.configui.core.UiPreviewCard;
 import com.rethinkqaq.configui.core.UiScaffold;
 import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
+import com.rethinkqaq.configui.core.UiTextStyle;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.component.UiComponent;
 import com.rethinkqaq.configui.core.layout.UiHeader;
@@ -85,7 +86,8 @@ public final class DemoScreen extends UiScreen {
             .addPage(UiText.literal("Feedback"), feedbackPage(host, dialogs))
             .addPage(UiText.literal("Preview"), previewPage(dialogs))
             .addPage(UiText.literal("Themes"), themesPage(host))
-            .addPage(UiText.literal("Templates"), templatesPage(dialogs))
+            .addPage(UiText.literal("Text styles"), textStylesPage())
+            .addPage(UiText.literal("Templates"), templatesPage())
             .addPage(UiText.literal("Custom"), advancedPage());
 
         Ui.Row footer = Ui.row().gap(8)
@@ -189,9 +191,7 @@ public final class DemoScreen extends UiScreen {
             .footerAlignment(UiMainAxisAlignment.END)
             .footerDivider(true)
             .build();
-        return Ui.column().gap(12)
-            .add(Ui.label(UiText.literal("UiTemplate composes Header, Navigation, Content and Footer.")))
-            .add(template);
+        return template;
     }
 
     private static Ui.Node inputPage() {
@@ -358,7 +358,30 @@ public final class DemoScreen extends UiScreen {
                 .add(Ui.label(UiText.literal("surface / control / accent"))));
     }
 
-    private static Ui.Node templatesPage(UiDialogHost dialogs) {
+    private static Ui.Node templatesPage() {
+        UiPageHost templates = Ui.pageHost()
+            .addPage(UiText.literal("Top navigation"), topNavigationTemplatePage())
+            .addPage(UiText.literal("Sidebar"), sidebarTemplatePage());
+        return Ui.scaffold(templates)
+            .navigationMode(UiScaffold.NavigationMode.TOP)
+            .navigation(templates.navigation());
+    }
+
+    private static Ui.Node topNavigationTemplatePage() {
+        UiPageHost settings = Ui.pageHost()
+            .addPage(UiText.literal("General"), Ui.section(UiText.literal("GENERAL"))
+                .add(Ui.label(UiText.literal("A complete UiTemplate owns its navigation and independently scrolling content."))))
+            .addPage(UiText.literal("Advanced"), Ui.section(UiText.literal("ADVANCED"))
+                .add(Ui.label(UiText.literal("Switching pages resets the selected ordinary page scroll position."))));
+        return Ui.topNavigationTemplate()
+            .header(UiText.literal("Top navigation template"))
+            .navigation(settings.navigation())
+            .content(settings)
+            .footer(Ui.row().add(Ui.button(UiText.literal("Done"), () -> { })))
+            .build();
+    }
+
+    private static Ui.Node sidebarTemplatePage() {
         UiPageHost sidebarPages = Ui.pageHost()
             .addPage(UiText.literal("Settings"), Ui.section(UiText.literal("SETTINGS"))
                 .add(Ui.settingRow(UiText.literal("Example"), Ui.toggle(UiText.literal("Enabled"),
@@ -370,18 +393,41 @@ public final class DemoScreen extends UiScreen {
             .sidebar(sidebarPages.navigation())
             .footer(Ui.row().add(Ui.button(UiText.literal("Done"), () -> { })))
             .sidebarWidth(138);
-        UiScaffold editor = Ui.scaffold(
-            Ui.column().gap(8)
-                .add(Ui.row().gap(8).add(Ui.button(UiText.literal("Tool"), () -> { })).add(Ui.badge(UiText.literal("READY"))))
-                .add(Ui.split(Ui.panel().padding(10).add(Ui.label(UiText.literal("Editor"))),
-                    Ui.preview((renderer, bounds, clip, theme) -> renderer.fillRoundRect(bounds, 8, theme.palette().accent()))
-                        .preferredWidth(120).preferredHeight(70)).gap(8))
-                .add(Ui.alert(UiFeedbackType.INFO, UiText.literal("Status area"))))
-            .header(UiHeader.text(UiText.literal("Editor template")))
-            .footer(Ui.row().add(Ui.button(UiText.literal("Open dialog"), () -> dialogs.show(dialogContent(dialogs)))));
+        return sidebar;
+    }
+
+    private static Ui.Node textStylesPage() {
+        UiTextStyle title = UiTextStyle.title().scale(1.35f);
+        UiTextStyle subtitle = UiTextStyle.subtitle().scale(.85f)
+            .color(0xFF6B7280);
+        UiTextStyle accent = UiTextStyle.body().scale(1.1f).color(0xFFF39ABA);
+        UiTextStyle success = UiTextStyle.success().color(0xFF3A8F5B);
+        UiTextStyle error = UiTextStyle.error().color(0xFFE35D6A);
         return Ui.column().gap(14)
-            .add(Ui.section(UiText.literal("SIDEBAR CONFIGURATION" )).add(sidebar))
-            .add(Ui.section(UiText.literal("TOOL / EDITOR / STATUS")).add(editor));
+            .add(Ui.section(UiText.literal("TEXT STYLES"))
+                .add(Ui.label(UiText.literal("UiText remains content-only; UiTextStyle supplies reusable visual intent."))
+                    .textStyle(subtitle).wrap(true))
+                .add(Ui.label(UiText.literal("Title style: larger text with an explicit semantic role."))
+                    .textStyle(title))
+                .add(Ui.label(UiText.literal("Accent and success styles can override the theme color."))
+                    .textStyle(accent))
+                .add(Ui.label(UiText.literal("Success text uses a custom green color."))
+                    .textStyle(success))
+                .add(Ui.label(UiText.literal("Error text uses a custom red color."))
+                    .textStyle(error)))
+            .add(Ui.section(UiText.literal("COMPONENT OVERRIDES"))
+                .add(Ui.row().gap(8)
+                    .add(Ui.button(UiText.literal("Small button"), () -> { })
+                        .textStyle(UiTextStyle.button().scale(.8f)))
+                    .add(Ui.button(UiText.literal("Large button"), () -> { })
+                        .textStyle(UiTextStyle.button().scale(1.2f)))
+                    .add(Ui.button(UiText.literal("Pink action"), () -> { })
+                        .textStyle(accent)))
+                .add(Ui.label(UiText.literal("The same style object can be applied to different components."))
+                    .textStyle(subtitle).wrap(true)))
+            .add(Ui.section(UiText.literal("LONG TEXT AND FITTING"))
+                .add(Ui.label(UiText.literal("This deliberately long English sentence verifies that measured width, fitted width, line height and final drawing use the same text scale."))
+                    .textStyle(UiTextStyle.body().scale(.9f)).wrap(true)));
     }
 
     private static Ui.Node generalPage(AtomicBoolean enabled, AtomicReference<Double> scale,

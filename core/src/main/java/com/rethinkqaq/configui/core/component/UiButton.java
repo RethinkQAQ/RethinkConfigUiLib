@@ -28,6 +28,7 @@ import com.rethinkqaq.configui.core.UiRenderer;
 import com.rethinkqaq.configui.core.UiText;
 import com.rethinkqaq.configui.core.UiTheme;
 import com.rethinkqaq.configui.core.UiTextMetrics;
+import com.rethinkqaq.configui.core.UiTextStyle;
 
 /** A semantic action button. */
 public class UiButton extends Ui.Node {
@@ -37,6 +38,7 @@ public class UiButton extends Ui.Node {
     private Ui.ButtonVariant variant = Ui.ButtonVariant.PRIMARY;
     private Supplier<Ui.ButtonVariant> variantSupplier;
     private float preferredWidth = -1;
+    private UiTextStyle textStyle = UiTextStyle.button();
 
     public UiButton(UiText text, Runnable action) {
         this.text = Objects.requireNonNull(text, "text");
@@ -47,6 +49,8 @@ public class UiButton extends Ui.Node {
     public UiButton variant(Ui.ButtonVariant value) { variant = Objects.requireNonNull(value, "variant"); variantSupplier = null; return this; }
     public UiButton variant(Supplier<Ui.ButtonVariant> value) { variantSupplier = Objects.requireNonNull(value, "variant"); return this; }
     public Ui.ButtonVariant variant() { return variant; }
+    public UiButton textStyle(UiTextStyle value) { textStyle = Objects.requireNonNull(value, "textStyle"); invalidateLayout(); return this; }
+    public UiTextStyle textStyle() { return textStyle; }
     /** Sets an optional fixed logical width for compact action rows. */
     public UiButton preferredWidth(float value) {
         if (value <= 0) throw new IllegalArgumentException("preferred button width must be positive");
@@ -60,7 +64,7 @@ public class UiButton extends Ui.Node {
 
     @Override
     protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
-        float textScale = UiTextMetrics.buttonScale(theme.metrics());
+        float textScale = textStyle.scale() * UiTextMetrics.buttonScale(theme.metrics());
         float naturalWidth = Math.max(theme.metrics().controlHeight() * 2,
             renderer.textWidth(text, textScale) + theme.metrics().padding() * 3);
         measuredWidth = Math.min(maxWidth, preferredWidth > 0 ? preferredWidth : naturalWidth);
@@ -69,7 +73,7 @@ public class UiButton extends Ui.Node {
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
-        float textScale = UiTextMetrics.buttonScale(theme.metrics());
+        float textScale = textStyle.scale() * UiTextMetrics.buttonScale(theme.metrics());
         Ui.ButtonVariant currentVariant = currentVariant();
         int color = color(theme);
         boolean unselected = currentVariant == Ui.ButtonVariant.SECONDARY || currentVariant == Ui.ButtonVariant.OUTLINE;
@@ -82,7 +86,7 @@ public class UiButton extends Ui.Node {
         float x = bounds.x() + (bounds.width() - renderer.textWidth(displayed, textScale)) / 2;
         UiTextMetrics.draw(renderer, displayed, x,
             bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, textScale)) / 2,
-            textWidth, textColor, textScale);
+            textWidth, textStyle.colorOverride() == null ? textColor : textStyle.colorOverride(), textScale);
         if (currentVariant == Ui.ButtonVariant.OUTLINE || currentVariant == Ui.ButtonVariant.SECONDARY) {
             renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
                 theme.metrics().borderWidth(), theme.palette().border());

@@ -21,6 +21,8 @@ package com.rethinkqaq.configui.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -204,6 +206,50 @@ class UiBindingTest {
         standalone.measure(RENDERER, 120, 80, UiTheme.roseLight());
         standalone.layout(RENDERER, new UiBounds(0, 0, 120, 80), UiTheme.roseLight());
         assertTrue(standaloneContent.bounds().height() < 80f);
+    }
+
+    @Test
+    void pageHostDoesNotWrapCompletePageRoots() {
+        UiScaffold scaffold = Ui.scaffold(Ui.label(UiText.literal("Content")));
+        UiPageHost pages = Ui.pageHost().addPage(UiText.literal("Page"), scaffold);
+
+        assertSame(scaffold, pages.currentPage());
+        pages.measure(RENDERER, 120, 80, UiTheme.roseLight());
+        pages.layout(RENDERER, new UiBounds(0, 0, 120, 80), UiTheme.roseLight());
+        assertEquals(80f, scaffold.bounds().height());
+    }
+
+    @Test
+    void scrollViewRejectsDirectAndIndirectPageRoots() {
+        assertThrows(IllegalArgumentException.class,
+            () -> Ui.scrollView(Ui.scaffold(Ui.label(UiText.literal("Content")))));
+        assertThrows(IllegalArgumentException.class,
+            () -> Ui.scrollView(Ui.panel().add(Ui.scaffold(Ui.label(UiText.literal("Content"))))));
+    }
+
+    @Test
+    void scaffoldBackgroundIsTransparentUntilExplicitlyConfigured() {
+        UiScaffold scaffold = Ui.scaffold(Ui.label(UiText.literal("Content")));
+        assertEquals(UiBackground.Mode.TRANSPARENT, scaffold.background().mode());
+        scaffold.background(UiBackground.opaque(0xFF123456));
+        assertEquals(UiBackground.Mode.OPAQUE, scaffold.background().mode());
+
+        UiBounds[] fill = new UiBounds[1];
+        UiRenderer renderer = new UiRenderer() {
+            @Override public void fillRect(UiBounds bounds, int color) { fill[0] = bounds; }
+            @Override public void fillRoundRect(UiBounds bounds, float radius, int color) { }
+            @Override public void strokeRoundRect(UiBounds bounds, float radius, float width, int color) { }
+            @Override public void drawText(UiText text, float x, float y, int color) { }
+            @Override public float textWidth(UiText text) { return text.value().length() * 6f; }
+            @Override public float lineHeight() { return 10; }
+            @Override public void pushClip(UiBounds bounds) { }
+            @Override public void popClip() { }
+        };
+        UiBounds bounds = new UiBounds(4, 8, 120, 80);
+        scaffold.measure(renderer, bounds.width(), bounds.height(), UiTheme.roseLight());
+        scaffold.layout(renderer, bounds, UiTheme.roseLight());
+        scaffold.render(renderer, UiTheme.roseLight());
+        assertEquals(bounds, fill[0]);
     }
 
     @Test

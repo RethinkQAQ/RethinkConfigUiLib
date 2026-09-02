@@ -45,4 +45,20 @@ class UiCustomTest {
         assertEquals(UiTheme.roseLight().palette().accent(), UiTheme.roseDark().palette().accent());
         assertTrue(UiTheme.roseDark().palette().surface() != UiTheme.roseLight().palette().surface());
     }
+
+    @Test
+    void customThemeUsesSuppliedVisualTokensAndDefaultMotionAndStates() {
+        UiTheme base = UiTheme.roseLight();
+        UiTheme.UiPalette palette = UiTheme.UiPalette.builder()
+            .accent(0xFF5B8CFF)
+            .build();
+        UiTheme.UiMetrics metrics = new UiTheme.UiMetrics(8, 6, 10, 32, 1);
+
+        UiTheme custom = UiTheme.custom(palette, metrics);
+
+        assertEquals(palette, custom.palette());
+        assertEquals(metrics, custom.metrics());
+        assertEquals(base.motion(), custom.motion());
+        assertEquals(base.states(), custom.states());
+    }
 }

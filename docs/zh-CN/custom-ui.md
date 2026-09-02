@@ -1,11 +1,11 @@
 # 完全自定义 UI
 
-RCUI 不只用于配置页面。模板不是强制的，你可以直接用节点制作编辑器、仪表盘、
+RCUI 不只用于配置页面。模板不是强制的，你可以直接用节点制作仪表盘、
 工具或预览界面。
 
 ## 什么时候不使用模板
 
-页面是全屏画布、三栏编辑器或游戏化工具时，可以跳过标准模板。如果页面仍然
+页面是全屏画布、多栏工具或游戏化界面时，可以跳过标准模板。如果页面仍然
 符合 Header/Navigation/Content/Footer 结构，通常只需要在 Content 内自定义。
 
 ## 组合自定义根节点
@@ -51,9 +51,9 @@ Preview、滚动、可见性和生命周期。高级渲染层和大型动画系�
 - 根节点关闭时释放资源。
 
 ![完全自定义 UI](../imags/custom-ui.png)
-<!-- TODO: Add a screenshot of a non-configuration RCUI editor. -->
+<!-- TODO: Add a screenshot of a non-configuration RCUI interface. -->
 
 ## Demo 对应页面
 
 Custom 页面展示小型自定义节点树；Templates 和 Preview 页面展示如何用同样的
-基础能力制作更大的编辑器式页面。
+基础能力制作更大的自定义页面。

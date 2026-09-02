@@ -47,6 +47,51 @@ Preview cards combine a title, bounded preview area, description, selection
 state and optional action node. Use them for models, textures and presets. The
 preview does not own your model resource.
 
+## Text styles
+
+`UiText` stores text content. `UiTextStyle` stores reusable visual intent for
+that text. This keeps content separate from typography.
+
+```java
+UiTextStyle title = UiTextStyle.title().scale(1.35f);
+UiTextStyle muted = UiTextStyle.subtitle().scale(.85f).color(0xFF6B7280);
+UiTextStyle success = UiTextStyle.success().color(0xFF3A8F5B);
+
+Ui.Node text = Ui.column()
+    .gap(6)
+    .add(Ui.label(UiText.literal("A page title")).textStyle(title))
+    .add(Ui.label(UiText.literal("A quieter explanation")).textStyle(muted))
+    .add(Ui.label(UiText.literal("Saved successfully")).textStyle(success));
+```
+
+Built-in semantic factories are `title()`, `subtitle()`, `body()`,
+`secondary()`, `button()`, `caption()`, `error()` and `success()`. Use
+`UiTextStyle.of(UiTextRole.CAPTION)` for a role directly. The style is
+immutable: `scale(...)`, `color(...)`, `role(...)` and `overflow(...)` return a
+new style, so one style can safely be shared by several nodes.
+
+```java
+UiTextStyle actionText = UiTextStyle.button().scale(.9f);
+Ui.Node actions = Ui.row()
+    .gap(8)
+    .add(Ui.button(UiText.literal("Apply"), this::apply).textStyle(actionText))
+    .add(Ui.button(UiText.literal("Cancel"), this::cancel).textStyle(actionText));
+```
+
+`scale(...)` is a positive text-size multiplier; density and component metrics
+are still applied. `color(...)` is an explicit ARGB override. Without it, the
+component and theme provide the fallback. `overflow(...)` describes `WRAP`,
+`ELLIPSIS`, `CLIP` or `NO_WRAP`; a `UiLabel` currently controls wrapping with
+`wrap(true)` and `maxLines(...)`. Text styles do not change backgrounds,
+padding, layout or business behaviour.
+
+Headers and buttons also accept styles through `titleStyle(...)`,
+`subtitleStyle(...)` and `textStyle(...)`. The `Text styles` Demo page shows
+shared styles, scale differences, colour overrides, long text and fitting.
+
+![Text style examples](../imags/text-styles.png)
+<!-- TODO: Add a screenshot showing roles, scale, colour overrides and fitting. -->
+
 ## Layout components
 
 ```java

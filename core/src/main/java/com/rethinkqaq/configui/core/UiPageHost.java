@@ -19,14 +19,14 @@
 
 package com.rethinkqaq.configui.core;
 
+import com.rethinkqaq.configui.core.layout.UiScrollView;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Hosts a set of arbitrary UI pages behind one reusable category navigation bar.
- * Pages are wrapped in a scroll viewport so switching pages never requires a
- * platform-specific screen implementation.
+ * Hosts ordinary scrolling pages and complete page roots behind one reusable category navigation bar.
  */
 public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.ClipProvider {
     private final List<Page> pages = new ArrayList<>();
@@ -77,20 +77,21 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.Cl
         if (next != selectedIndex) {
             selectedIndex = next;
             subpages.clear();
-            pages.get(selectedIndex).content().reset();
+            resetScroll(pages.get(selectedIndex).content());
             invalidateLayout();
         }
         return this;
     }
 
     @Override public List<Ui.Node> childNodes() {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content == null ? List.of() : List.of(content);
     }
 
     @Override public UiBounds viewportBounds() {
-        Ui.ScrollView content = currentContent();
-        return content == null ? UiBounds.EMPTY : content.bounds();
+        Ui.Node content = currentContent();
+        if (content == null) return UiBounds.EMPTY;
+        return content instanceof Ui.ClipProvider provider ? provider.viewportBounds() : content.bounds();
     }
 
     @Override protected void measureSelf(UiRenderer renderer, float maxWidth, float maxHeight, UiTheme theme) {
@@ -99,7 +100,7 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.Cl
             measuredHeight = maxHeight;
             return;
         }
-        Ui.ScrollView page = currentContent();
+        Ui.Node page = currentContent();
         page.measure(renderer, maxWidth, maxHeight, theme);
         measuredWidth = Math.min(maxWidth, page.measuredWidth());
         measuredHeight = Math.min(maxHeight, page.measuredHeight());
@@ -107,56 +108,61 @@ public final class UiPageHost extends Ui.Node implements Ui.ChildProvider, Ui.Cl
 
     @Override public void layout(UiRenderer renderer, UiBounds value, UiTheme theme) {
         super.layout(renderer, value, theme);
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         if (content != null) content.layout(renderer, value, theme);
     }
 
     @Override public void render(UiRenderer renderer, UiTheme theme) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         if (content != null) content.render(renderer, theme);
     }
 
     @Override public boolean click(float x, float y, int button) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.click(x, y, button);
     }
     @Override public boolean scroll(float x, float y, double amount) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.scroll(x, y, amount);
     }
     @Override public boolean drag(float x, float y, int button) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.drag(x, y, button);
     }
     @Override public boolean release(float x, float y, int button) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.release(x, y, button);
     }
     @Override public boolean key(int keyCode) {
         if (keyCode == UiKey.ESCAPE && pop()) return true;
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.key(keyCode);
     }
     @Override public boolean key(UiKeyEvent event, UiClipboard clipboard) {
         if (event.keyCode() == UiKey.ESCAPE && pop()) return true;
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.key(event, clipboard);
     }
     @Override public boolean textInput(UiTextInput event, UiClipboard clipboard) {
-        Ui.ScrollView content = currentContent();
+        Ui.Node content = currentContent();
         return content != null && content.textInput(event, clipboard);
     }
 
-    private Ui.ScrollView currentContent() {
+    private Ui.Node currentContent() {
         if (!subpages.isEmpty()) return subpages.get(subpages.size() - 1).content();
         return selectedIndex < 0 ? null : pages.get(selectedIndex).content();
     }
 
-    private static Ui.ScrollView scrollContent(Ui.Node content) {
+    private static Ui.Node scrollContent(Ui.Node content) {
         Ui.Node node = Objects.requireNonNull(content, "content");
+        if (node instanceof UiPageRoot) return node;
         Ui.ScrollView scroll = node instanceof Ui.ScrollView existing ? existing : Ui.scrollView(node);
         return scroll.fillViewportChild();
     }
 
-    private record Page(UiText title, Ui.ScrollView content) { }
+    private static void resetScroll(Ui.Node content) {
+        if (content instanceof UiScrollView scroll) scroll.reset();
+    }
+
+    private record Page(UiText title, Ui.Node content) { }
 }

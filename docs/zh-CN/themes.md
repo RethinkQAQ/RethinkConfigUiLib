@@ -29,6 +29,19 @@ UiTheme darkBlue = UiTheme.roseDark()
 withPalette 修改语义颜色；withMetrics 修改尺寸；withMotion 修改过渡；
 withStates 修改状态强度。只改变重点色时可以使用 withAccent。
 
+## 排版与文本样式
+
+主题提供默认文字颜色、密度度量和组件文字层级。当某个节点需要不同的语义、
+大小或明确颜色时，使用 `UiTextStyle`：
+
+```java
+UiTextStyle note = UiTextStyle.secondary().scale(.9f).color(0xFF9CA3AF);
+Ui.Node label = Ui.label(UiText.literal("可选设置")).textStyle(note);
+```
+
+不设置颜色时，文本样式会回退到组件或主题颜色。文本样式不会修改背景、内边距
+或业务行为。
+
 ## 从头创建主题
 
 UiTheme.custom 使用默认的 motion 和 state visuals：

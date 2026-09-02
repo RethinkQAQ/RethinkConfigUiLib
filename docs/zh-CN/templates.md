@@ -35,6 +35,37 @@ UiTemplate page = UiTemplate.topNavigation()
 `UiPageHost` 提供导航并切换当前页面；`UiTemplate` 把它放入顶部导航外壳。
 默认 Content 可以独立滚动，Footer 位于滚动区域之外。
 
+## 页面根节点与滚动
+
+`UiScaffold` 和 `UiTemplate` 是完整的页面根节点，不是内容卡片。它们负责
+固定的 Header、Sidebar 或 Navigation、Content 视口和 Footer。把它们直接传给
+`UiPageHost` 时，RCUI 会直接布局，而不会再额外添加 ScrollView。
+
+```text
+UiHost background
+└── UiScaffold
+    ├── 固定 Header / Sidebar
+    ├── 裁剪且可滚动的 Content
+    └── 固定 Footer
+```
+
+不要把 Scaffold 或 Template 放进 `UiScrollView`、`UiSection`，或会整体滚动的
+Panel 中。RCUI 会拒绝包含页面根节点的 ScrollView，包括间接嵌套，因为这种结构
+会让本应固定的区域随滚动离开，并产生不一致的背景或点击区域。
+
+Host 负责正常的页面背景。Scaffold 默认透明；只有完整页面骨架需要独立表面时，
+才显式设置背景：
+
+```java
+UiScaffold page = Ui.scaffold(pages)
+    .background(UiBackground.opaque(0xFF202124))
+    .sidebar(pages.navigation())
+    .footer(footer);
+```
+
+普通内容分组请在 Scaffold 的 Content 内使用 `UiSection` 和 `UiPanel`，不要反过来
+用它们包裹 Scaffold。
+
 ## 双栏配置模板
 
 设置分类很多时使用侧边栏：
@@ -65,47 +96,6 @@ UiScaffold page = Ui.scaffold(pages)
 侧边栏是独立区域。内容可能超过视口时，应使用 `UiPageHost` 或
 `UiScrollView`。`sidebarWidth(...)` 是布局值，不是 Minecraft 画布缩放。
 
-## 工具和编辑器模板
-
-编辑器通常需要工具栏、主区域、状态提示和弹窗：
-
-```text
-Header
-Content
-├── Toolbar
-├── Main editor area
-└── Status/feedback area
-Footer
-Dialog
-```
-
-```java
-UiDialogHost dialogs = Ui.dialogHost();
-
-Ui.Node editor = Ui.column()
-    .gap(8)
-    .add(Ui.row()
-        .add(Ui.button(UiText.literal("Import"), this::importData))
-        .add(Ui.button(UiText.literal("Export"), this::exportData)))
-    .add(Ui.split(
-        Ui.panel().padding(12).add(Ui.label(UiText.literal("Editor"))),
-        Ui.preview((renderer, bounds, clip, theme) -> {
-            // Draw a model or image inside bounds and clip.
-        }).preferredHeight(160)))
-    .add(Ui.alert(UiFeedbackType.INFO, UiText.literal("Ready")));
-
-UiScaffold page = Ui.scaffold(editor)
-    .header(Ui.textHeader(UiText.literal("Editor")))
-    .footer(Ui.row().add(Ui.button(UiText.literal("Open"),
-        () -> dialogs.show(dialogContent()))));
-
-Ui.Node root = dialogs.root(page);
-```
-
-需要叠加层时使用 `UiStack`；需要响应式左右面板时使用 `UiSplitLayout`；
-需要有边界的绘制时使用 `UiPreview`；非阻塞反馈使用
-`UiNotificationCenter`/`UiToast`。
-
 ## Footer 规则
 
 没有独立的 `UiFooter` 组件。Footer 就是任意一个 `Ui.Node`：
@@ -132,7 +122,7 @@ UiTemplate page = UiTemplate.topNavigation()
 `UiTemplateLayout`：
 
 ```java
-UiTemplateLayout editorLayout = (slots, options) ->
+UiTemplateLayout sidebarLayout = (slots, options) ->
     Ui.scaffold(Ui.split(
             slots.navigation() == null ? Ui.panel() : slots.navigation(),
             slots.content()))
@@ -141,8 +131,8 @@ UiTemplateLayout editorLayout = (slots, options) ->
         .regionGap(options.regionGap() >= 0 ? options.regionGap() : 12);
 
 UiTemplate page = UiTemplate.template()
-    .layout(editorLayout)
-    .header(UiText.literal("Reusable editor"))
+    .layout(sidebarLayout)
+    .header(UiText.literal("Reusable sidebar"))
     .content(editorContent())
     .build();
 ```
@@ -151,9 +141,9 @@ UiTemplate page = UiTemplate.template()
 RCUI 的内置模板。
 
 ![页面模板结构](../imags/template-structures.png)
-<!-- TODO: Add screenshots for top navigation, sidebar and editor templates. -->
+<!-- TODO: Add screenshots for top navigation and sidebar templates. -->
 
 ## Demo 对应页面
 
-Navigation 页面展示小型标准外壳；Templates 页面同时展示侧边栏、编辑器、
-固定 Footer、独立滚动和 Dialog 覆盖层。
+Navigation 页面展示小型标准外壳；Templates 页面展示顶部导航和侧边栏页面根节点，
+从而演示固定区域和独立 Content 滚动，不会把完整页面嵌套进外层 ScrollView。
