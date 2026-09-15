@@ -32,11 +32,12 @@ pluginManagement {
         maven("https://maven.neoforged.net/releases/")
         maven("https://maven.minecraftforge.net/")
         maven("https://maven.kikugie.dev/releases")
+        maven("https://maven.kikugie.dev/snapshots")
     }
 }
 
 plugins {
-    id("dev.kikugie.stonecutter") version "0.7.11"
+    id("dev.kikugie.stonecutter") version "0.9.8"
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
@@ -63,13 +64,16 @@ check(supportedVersions.all { version ->
     "stonecutter_enabled_versions contains an invalid Minecraft version"
 }
 
-fun versionProperties(version: String): Properties = Properties().apply {
+private fun loadVersionProperties(version: String): Properties = Properties().apply {
     val source = file("versions/$version/gradle.properties")
     check(source.isFile) { "Missing version properties file: ${source.path}" }
     source.inputStream().use(::load)
 }
 
-fun enabledPlatforms(version: String): Set<String> {
+val versionMetadata = supportedVersions.associateWith(::loadVersionProperties)
+fun versionProperties(version: String): Properties = versionMetadata.getValue(version)
+
+val enabledPlatformsByVersion = supportedVersions.associateWith { version ->
     val value = versionProperties(version).getProperty("enable_platforms")
         ?: error("Version $version is missing enable_platforms")
     val platforms = value.split(',').map(String::trim).filter(String::isNotEmpty).toSet()
@@ -77,11 +81,27 @@ fun enabledPlatforms(version: String): Set<String> {
     check(platforms.all { it in allowedPlatforms }) {
         "Version $version contains unsupported platforms: ${platforms - allowedPlatforms}"
     }
-    return platforms
+    platforms
+}
+
+versionMetadata.forEach { (version, values) ->
+    listOf("enable_platforms", "minecraft_version", "publish_version").forEach { key ->
+        check(!values.getProperty(key).isNullOrBlank()) {
+            "versions/$version/gradle.properties is missing $key"
+        }
+    }
+    check(values.getProperty("minecraft_version") == version) {
+        "versions/$version/gradle.properties must declare minecraft_version=$version"
+    }
+    enabledPlatformsByVersion.getValue(version).forEach { platform ->
+        check(!values.getProperty("minecraft_version_range_$platform").isNullOrBlank()) {
+            "versions/$version/gradle.properties is missing minecraft_version_range_$platform"
+        }
+    }
 }
 
 val platformVersions = allowedPlatforms.associateWith { platform ->
-    supportedVersions.filter { platform in enabledPlatforms(it) }
+    supportedVersions.filter { platform in enabledPlatformsByVersion.getValue(it) }
 }
 
 stonecutter {
@@ -104,7 +124,6 @@ rootProject.name = "rethink-config-ui-lib"
 include(":core", ":config")
 
 gradle.projectsLoaded {
-    rootProject.pluginManager.apply("base")
     rootProject.group = providers.gradleProperty("mod.group").get()
     rootProject.version = providers.gradleProperty("mod.version").get()
     val validateVersionProperties = rootProject.tasks.register("validateVersionProperties") {
@@ -121,7 +140,7 @@ gradle.projectsLoaded {
                 check(values.getProperty("minecraft_version") == version) {
                     "versions/$version/gradle.properties must declare minecraft_version=$version"
                 }
-                enabledPlatforms(version).forEach { platform ->
+                enabledPlatformsByVersion.getValue(version).forEach { platform ->
                     check(!values.getProperty("minecraft_version_range_$platform").isNullOrBlank()) {
                         "versions/$version/gradle.properties is missing minecraft_version_range_$platform"
                     }
@@ -156,7 +175,9 @@ gradle.projectsLoaded {
         }
     }
 
-    rootProject.tasks.named("build") {
+    val rootBuild = rootProject.tasks.register("build") {
+        group = "build"
+        description = "Builds all enabled RCUI loader and Minecraft version projects."
         dependsOn(":config:build")
         dependsOn(loaderTaskPaths)
         dependsOn(validateVersionProperties)
@@ -164,7 +185,7 @@ gradle.projectsLoaded {
     }
     rootProject.tasks.register("collectPlatformJars", Copy::class.java) {
         group = "build"
-        dependsOn(rootProject.tasks.named("build"))
+        dependsOn(rootBuild)
         into(rootProject.layout.buildDirectory.dir("platform-jars"))
         platformVersions.forEach { (platform, versions) ->
             versions.forEach { version ->

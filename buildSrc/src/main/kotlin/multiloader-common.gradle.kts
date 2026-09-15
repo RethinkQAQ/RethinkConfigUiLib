@@ -10,22 +10,17 @@ plugins {
     id("license-conventions")
 }
 
-val stonecutterGenerateTask = ":common:${commonMod.prop("minecraft_version")}:stonecutterGenerate"
 val licenseFormat = tasks.named("licenseFormat") {
     dependsOn(stonecutterGenerateTask)
 }
 
-val configuredJavaVersion = commonMod.mc.let { version ->
-    val parts = version.split('.').mapNotNull(String::toIntOrNull)
-    val major = parts.getOrElse(0) { 0 }
-    val minor = parts.getOrElse(1) { 0 }
-    val patch = parts.getOrElse(2) { 0 }
-
+val minecraftVersion = commonMod.minecraftVersion
+val configuredJavaVersion = minecraftVersion.let { version ->
     when {
-        major >= 26 -> 25
-        major == 1 && (minor > 20 || (minor == 20 && patch >= 5)) -> 21
-        major == 1 && minor >= 18 -> 17
-        major == 1 && minor >= 17 -> 16
+        version.major >= 26 -> 25
+        version.atLeast(1, 20, 5) -> 21
+        version.atLeast(1, 18) -> 17
+        version.atLeast(1, 17) -> 16
         else -> 8
     }
 }
@@ -165,10 +160,8 @@ repositories {
 }
 
 val resourcePackFormat = commonMod.propOrNull("resource_pack_format") ?: "15"
-val usesMinorResourcePackFormat = commonMod.mc.let { version ->
-    val parts = version.split('.').map(String::toInt)
-    parts[0] >= 26 || (parts[0] == 1 && parts[1] == 21 && parts[2] >= 9)
-}
+val usesMinorResourcePackFormat = minecraftVersion.atLeast(26, 0) ||
+    minecraftVersion.atLeast(1, 21, 11)
 val resourcePackMetadata = if (usesMinorResourcePackFormat) {
     "\"min_format\": [$resourcePackFormat, 0],\n        \"max_format\": [$resourcePackFormat, 0]"
 } else {

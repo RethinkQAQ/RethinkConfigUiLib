@@ -44,7 +44,7 @@ fun Project.configureMixinSupport(target: MixinTarget) {
             dependencies.add("include", dependency)
         }
         MixinTarget.FORGE -> {
-            val minor = commonMod.mc.split('.').getOrNull(1)?.toIntOrNull() ?: 0
+            val minor = commonMod.minecraftVersion.minor
             if (minor >= 17) {
                 dependencies.add("implementation", "io.github.llamalad7:mixinextras-forge:$MIXIN_EXTRAS_VERSION")
                 if (configurations.findByName("jarJar") != null) {

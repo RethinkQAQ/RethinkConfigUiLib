@@ -30,13 +30,12 @@ dependencies {
     add(commonResourcesDependencies.name, commonResourcesProject)
 }
 
-val generatedPlatformJava = layout.buildDirectory.dir("generated/stonecutter/main/java")
 tasks.compileJava {
     // Compile the Stonecutter-generated platform sources instead of the raw
     // branch sources. This is required for platform-specific preprocessing
     // such as ResourceLocation/Identifier and legacy mappings.
-    dependsOn("stonecutterGenerate")
-    setSource(files(generatedPlatformJava, commonJava))
+    dependsOn(stonecutterGenerateTask)
+    setSource(files(stonecutterGeneratedMain.map { it.dir("java") }, commonJava))
 }
 tasks.processResources {
     from(commonResources) {

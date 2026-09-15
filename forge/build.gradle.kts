@@ -29,12 +29,12 @@ plugins {
 
 apply(plugin = "dev.kikugie.fletching-table")
 
-val forgeVersionParts = commonMod.mc.split('.').mapNotNull(String::toIntOrNull)
-val forgeMajor = forgeVersionParts.getOrElse(0) { 0 }
-val forgeMinor = forgeVersionParts.getOrElse(1) { 0 }
-val forgePatch = forgeVersionParts.getOrElse(2) { 0 }
+val minecraftVersion = commonMod.minecraftVersion
+val forgeMajor = minecraftVersion.major
+val forgeMinor = minecraftVersion.minor
+val forgePatch = minecraftVersion.patch
 val legacyObfuscation = forgeMajor == 1 && (forgeMinor < 20 || forgeMinor == 20 && forgePatch <= 4)
-val supportsJarJar = forgeMajor >= 26 || forgeMajor > 1 || forgeMinor >= 17
+val supportsJarJar = minecraftVersion.atLeast(1, 17) || forgeMajor >= 26
 if (supportsJarJar) pluginManager.apply("net.minecraftforge.jarjar")
 
 val accessWidener = rootProject.file(

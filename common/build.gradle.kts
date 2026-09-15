@@ -60,13 +60,12 @@ val commonResources = configurations.consumable("commonResources") {
     attributes.attribute(commonSourceKind, "resources")
 }
 
-val generatedMain = layout.buildDirectory.dir("generated/stonecutter/main")
 artifacts {
-    add(commonJava.name, generatedMain.map { it.dir("java") }) {
-        builtBy(tasks.named("stonecutterGenerate"))
+    add(commonJava.name, stonecutterGeneratedMain.map { it.dir("java") }) {
+        builtBy(stonecutterGenerateTask)
     }
-    add(commonResources.name, generatedMain.map { it.dir("resources") }) {
-        builtBy(tasks.named("stonecutterGenerate"))
+    add(commonResources.name, stonecutterGeneratedMain.map { it.dir("resources") }) {
+        builtBy(stonecutterGenerateTask)
     }
 }
 
