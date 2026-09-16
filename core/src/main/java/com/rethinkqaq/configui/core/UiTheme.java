@@ -77,6 +77,11 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiS
         return builder().palette(palette).build();
     }
 
+    /** Dark blue-grey surfaces with a blue accent for users who prefer a lower-brightness UI. */
+    public static UiTheme midnightBlue() {
+        return builder().palette(UiPalette.midnightBlue()).build();
+    }
+
     public static final class Builder {
         private UiPalette palette = UiPalette.roseLight();
         private UiMetrics metrics = UiMetrics.comfortable();
@@ -90,11 +95,21 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiS
         public UiTheme build() { return new UiTheme(palette, metrics, motion, states); }
     }
 
-    /** Theme-owned blend and opacity values for shared interactive states. */
+    /** Theme-owned values for shared interactive states. */
     public record UiStateVisuals(float modalOverlayOpacity, float subtleBorderOpacity,
                                  float alertFillOpacity, float alertBorderOpacity,
                                  float shadowOpacity, float disabledStrength, float hoverStrength,
-                                 float pressedStrength, float focusStrength) {
+                                 float pressedStrength, float focusStrength,
+                                 float hoverRadiusScale) {
+        public UiStateVisuals(float modalOverlayOpacity, float subtleBorderOpacity,
+                              float alertFillOpacity, float alertBorderOpacity,
+                              float shadowOpacity, float disabledStrength, float hoverStrength,
+                              float pressedStrength, float focusStrength) {
+            this(modalOverlayOpacity, subtleBorderOpacity, alertFillOpacity, alertBorderOpacity,
+                shadowOpacity, disabledStrength, hoverStrength, pressedStrength, focusStrength,
+                1.24f);
+        }
+
         public UiStateVisuals {
             UiColor.validateUnit(modalOverlayOpacity, "modalOverlayOpacity");
             UiColor.validateUnit(subtleBorderOpacity, "subtleBorderOpacity");
@@ -105,9 +120,30 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiS
             UiColor.validateUnit(hoverStrength, "hoverStrength");
             UiColor.validateUnit(pressedStrength, "pressedStrength");
             UiColor.validateUnit(focusStrength, "focusStrength");
+            validateScale(hoverRadiusScale, "hoverRadiusScale");
         }
+
         public static UiStateVisuals defaults() {
-            return new UiStateVisuals(0.4f, 90 / 255f, 32 / 255f, 160 / 255f, 16 / 255f, .35f, .12f, .12f, .55f);
+            return new UiStateVisuals(0.4f, 90 / 255f, 32 / 255f, 160 / 255f, 16 / 255f,
+                .35f, .12f, .12f, .55f, 1.24f);
+        }
+
+        public UiStateVisuals withHoverRadiusScale(float value) {
+            return new UiStateVisuals(modalOverlayOpacity, subtleBorderOpacity, alertFillOpacity,
+                alertBorderOpacity, shadowOpacity, disabledStrength, hoverStrength, pressedStrength,
+                focusStrength, value);
+        }
+
+        public float hoverRadius(float baseRadius, float progress) {
+            return baseRadius * interpolate(hoverRadiusScale, progress);
+        }
+
+        private static float interpolate(float target, float progress) {
+            return 1f + (target - 1f) * Math.max(0f, Math.min(1f, progress));
+        }
+
+        private static void validateScale(float value, String name) {
+            if (!Float.isFinite(value) || value <= 0f) throw new IllegalArgumentException(name + " must be finite and positive");
         }
     }
 
@@ -149,6 +185,18 @@ public record UiTheme(UiPalette palette, UiMetrics metrics, UiMotion motion, UiS
                 0xFF29272A, 0xFF77747A, 0xFFAAA6AC,
                 0xFFE1E2E6, 0x00000000,
                 0xFF4FA96B, 0xFFF0A53B, 0xFFE35D6A
+            );
+        }
+
+        /** Dark blue-grey surfaces with semantic blue, focus and feedback colours. */
+        public static UiPalette midnightBlue() {
+            return new UiPalette(
+                0xFF111827, 0xFF1F2937,
+                0xFF374151, 0xFF4B5563, 0xFF6B7280, 0xFF303846,
+                0xFF60A5FA, 0xFF93C5FD, 0xFF3B82F6, 0xFF0F172A,
+                0xFFF9FAFB, 0xFFD1D5DB, 0xFF9CA3AF,
+                0xFF4B5563, 0xFF93C5FD,
+                0xFF34D399, 0xFFFBBF24, 0xFFF87171
             );
         }
 

@@ -61,12 +61,14 @@ public final class UiCollectionEditor<T> extends Ui.Node {
         measuredHeight = theme.metrics().controlHeight();
     }
     @Override public void render(UiRenderer renderer, UiTheme theme) {
-        int surface = enabled() ? blend(theme.palette().surfaceRaised(), theme.palette().surface(), hoverProgress()) : theme.palette().controlDisabled();
+        float hover = hoverProgress();
+        int surface = enabled() ? blend(theme.palette().surfaceRaised(), theme.palette().surface(), hover) : theme.palette().controlDisabled();
         int text = enabled() ? theme.palette().textPrimary() : theme.palette().textDisabled();
         float textScale = UiTextMetrics.buttonScale(theme.metrics());
         float lineHeight = UiTextMetrics.lineHeight(renderer, textScale);
-        renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), surface);
-        renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(), theme.palette().border());
+        float radius = theme.states().hoverRadius(theme.metrics().controlRadius(), hover);
+        renderer.fillRoundRect(bounds, radius, surface);
+        renderer.strokeRoundRect(bounds, radius, theme.metrics().borderWidth(), theme.palette().border());
         UiTextMetrics.draw(renderer, title, bounds.x() + theme.metrics().padding(), bounds.y() + (bounds.height() - lineHeight) / 2f,
             Math.max(0, bounds.width() - theme.metrics().padding() * 4), text, textScale);
         UiText count = UiText.literal("[" + size() + "]  >");

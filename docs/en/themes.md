@@ -8,29 +8,39 @@ look without changing business behaviour or the layout contract.
 ```java
 UiTheme light = UiTheme.roseLight();
 UiTheme dark = UiTheme.roseDark();
+UiTheme blueDark = UiTheme.midnightBlue();
 ```
 
-The light theme uses black, white, grey and a rose accent. The dark theme keeps
-the same semantic meanings on darker surfaces.
+The light theme uses black, white, grey and a rose accent. `roseDark` retains
+the rose accent on dark surfaces; `midnightBlue` uses dark blue-grey surfaces
+and a blue accent. `roseLight` remains the default, so existing screens do not
+change.
 
 ## Derive a theme
 
 Prefer deriving from an existing theme:
 
 ```java
-UiTheme darkBlue = UiTheme.roseDark()
-    .withPalette(UiTheme.UiPalette.builder()
-        .accent(0xFF60A5FA)
-        .accentHover(0xFF93C5FD)
-        .accentPressed(0xFF3B82F6)
-        .focusRing(0xFF93C5FD)
-        .build())
-    .withAccent(0xFF60A5FA);
+UiTheme customBlue = UiTheme.midnightBlue().withAccent(0xFF4F9CFF);
 ```
 
-Use withPalette for semantic colours, withMetrics for dimensions, withMotion
-for transitions, and withStates for shared state strengths. withAccent is a
-small shortcut for an accent-only change.
+withAccent replaces the accent, hover and pressed colours with one colour.
+Use withPalette for the complete semantic palette, withMetrics for dimensions,
+withMotion for transitions, and withStates for shared state strengths.
+
+Interactive controls smoothly grow their corner radius on hover by default.
+This affects rendering only, not hit bounds. The scale can be tuned through
+state visuals:
+
+```java
+UiTheme theme = UiTheme.roseLight().withStates(
+    UiTheme.UiStateVisuals.defaults()
+        .withHoverRadiusScale(1.3f)
+);
+```
+
+Hover text scaling is intentionally deferred until the text system can avoid
+raster jitter from continuously transforming Minecraft's pixel font.
 
 ## Typography and text styles
 
@@ -130,5 +140,5 @@ values are CARD, COMPACT, TEXT and NONE; there is no MODERN value.
 
 ## Demo
 
-The Themes page shows roseLight, roseDark, the Demo blue theme and density
+The Themes page shows roseLight, roseDark, midnightBlue and density
 guidance. Input and Feedback contain the interactive state and overlay checks.

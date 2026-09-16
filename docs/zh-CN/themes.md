@@ -7,27 +7,33 @@
 ```java
 UiTheme light = UiTheme.roseLight();
 UiTheme dark = UiTheme.roseDark();
+UiTheme blueDark = UiTheme.midnightBlue();
 ```
 
-亮色主题使用黑、白、灰和玫红重点色；暗色主题在更暗的表面上保持相同的语义含义。
+亮色主题使用黑、白、灰和玫红重点色；`roseDark` 在暗色表面上保留玫红重点色；
+`midnightBlue` 使用深蓝灰表面和蓝色重点色。默认主题仍为 `roseLight`，既有界面不会因此改变。
 
 ## 从已有主题派生
 
 推荐从已有主题派生：
 
 ```java
-UiTheme darkBlue = UiTheme.roseDark()
-    .withPalette(UiTheme.UiPalette.builder()
-        .accent(0xFF60A5FA)
-        .accentHover(0xFF93C5FD)
-        .accentPressed(0xFF3B82F6)
-        .focusRing(0xFF93C5FD)
-        .build())
-    .withAccent(0xFF60A5FA);
+UiTheme customBlue = UiTheme.midnightBlue().withAccent(0xFF4F9CFF);
 ```
 
-withPalette 修改语义颜色；withMetrics 修改尺寸；withMotion 修改过渡；
-withStates 修改状态强度。只改变重点色时可以使用 withAccent。
+`withAccent` 会用同一个颜色替换重点色、悬停色和按下色。`withPalette` 修改完整语义调色板；
+`withMetrics` 修改尺寸；`withMotion` 修改过渡；`withStates` 修改状态强度。
+
+默认可交互控件在 hover 时会平滑增大圆角，不改变控件命中区域。可通过状态视觉值调整：
+
+```java
+UiTheme theme = UiTheme.roseLight().withStates(
+    UiTheme.UiStateVisuals.defaults()
+        .withHoverRadiusScale(1.3f)
+);
+```
+
+Hover 文字放大暂不启用；像素字体在连续缩放时容易产生栅格抖动，待文字系统改进后再评估。
 
 ## 排版与文本样式
 
@@ -125,5 +131,5 @@ TEXT、NONE，没有 MODERN。
 
 ## Demo 对应页面
 
-Themes 页面展示 roseLight、roseDark、Demo 蓝色主题和密度说明；Input、Feedback
+Themes 页面展示 roseLight、roseDark、midnightBlue 和密度说明；Input、Feedback
 页面用于检查交互状态和覆盖层。

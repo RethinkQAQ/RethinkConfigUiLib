@@ -59,9 +59,11 @@ public class UiSelect<T> extends Ui.Node {
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
+        float hover = hoverProgress();
         int color = !enabled() ? theme.palette().controlDisabled()
-            : blend(theme.palette().control(), theme.palette().controlHover(), hoverProgress());
-        renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), color);
+            : blend(theme.palette().control(), theme.palette().controlHover(), hover);
+        float radius = theme.states().hoverRadius(theme.metrics().controlRadius(), hover);
+        renderer.fillRoundRect(bounds, radius, color);
         int textColor = enabled() ? theme.palette().onAccent() : theme.palette().textDisabled();
         float innerWidth = Math.max(0, bounds.width() - theme.metrics().padding() * 2);
         float half = innerWidth * .5f;
@@ -72,7 +74,7 @@ public class UiSelect<T> extends Ui.Node {
         UiTextMetrics.draw(renderer, selected,
             bounds.x() + bounds.width() - theme.metrics().padding() - renderer.textWidth(selected, scale),
             y, half, textColor, scale);
-        if (hasVisibleFocus(theme)) renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
+        if (hasVisibleFocus(theme)) renderer.strokeRoundRect(bounds, radius,
             theme.metrics().borderWidth(), blend(theme.palette().border(), theme.palette().focusRing(), focusProgress()));
     }
 

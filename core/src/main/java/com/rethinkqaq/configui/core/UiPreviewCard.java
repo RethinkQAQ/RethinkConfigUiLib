@@ -122,8 +122,11 @@ public final class UiPreviewCard extends Ui.Node implements Ui.ChildProvider, Ui
         // Keep every slot inside the card. This is important for platform previews that use
         // their own transform and for cards displayed in a scrolling grid.
         renderer.pushClip(bounds);
-        renderer.fillRoundRect(bounds, theme.metrics().cardRadius(), theme.palette().card());
-        renderer.strokeRoundRect(bounds, theme.metrics().cardRadius(), theme.metrics().borderWidth(), theme.palette().border());
+        float hover = hoverProgress();
+        float radius = theme.states().hoverRadius(theme.metrics().cardRadius(), hover);
+        renderer.fillRoundRect(bounds, radius, theme.palette().card());
+        int border = blend(theme.palette().border(), theme.palette().accent(), hover * .22f);
+        renderer.strokeRoundRect(bounds, radius, theme.metrics().borderWidth(), border);
         renderer.pushClip(preview.bounds());
         preview.render(renderer, theme);
         renderer.popClip();

@@ -77,7 +77,7 @@ public class UiSlider extends Ui.Node {
             : bounds.y() + (bounds.height() - railHeight) / 2f;
         UiBounds rail = new UiBounds(bounds.x(), railY, bounds.width(), railHeight);
         renderer.fillRoundRect(rail, rail.height(), theme.palette().border());
-        float ratio = displayedRatio < 0 ? targetRatio() : displayedRatio;
+        float ratio = dragging || displayedRatio < 0 ? targetRatio() : displayedRatio;
         renderer.fillRoundRect(new UiBounds(rail.x(), rail.y(), rail.width() * ratio, rail.height()), rail.height(), accent);
         float knob = theme.metrics().controlHeight() * .45f;
         renderer.fillRoundRect(new UiBounds(rail.x() + rail.width() * ratio - knob / 2,
@@ -88,7 +88,7 @@ public class UiSlider extends Ui.Node {
             blend(theme.palette().border(), theme.palette().focusRing(), focusProgress() * theme.states().focusStrength()));
     }
 
-    public float displayedRatio() { return displayedRatio < 0 ? targetRatio() : displayedRatio; }
+    public float displayedRatio() { return dragging || displayedRatio < 0 ? targetRatio() : displayedRatio; }
 
     private boolean hasLabel() { return !text.value().isEmpty(); }
 
@@ -100,6 +100,7 @@ public class UiSlider extends Ui.Node {
             : Math.max(0f, (nowNanos - lastValueMotionNanos) / 1_000_000f);
         lastValueMotionNanos = nowNanos;
         if (displayedRatio < 0) displayedRatio = target;
+        else if (dragging) displayedRatio = target;
         else displayedRatio = approach(displayedRatio, target, elapsedMillis, theme.motion().toggleMillis());
     }
 
@@ -109,6 +110,7 @@ public class UiSlider extends Ui.Node {
 
     private void setFromX(float x) {
         set(min + Math.max(0f, Math.min(1f, (x - bounds.x()) / Math.max(1f, bounds.width()))) * (max - min));
+        if (dragging) displayedRatio = targetRatio();
     }
 
     @Override

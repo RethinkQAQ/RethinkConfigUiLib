@@ -73,6 +73,7 @@ public class UiButton extends Ui.Node {
 
     @Override
     public void render(UiRenderer renderer, UiTheme theme) {
+        float hover = hoverProgress();
         float textScale = textStyle.scale() * UiTextMetrics.buttonScale(theme.metrics());
         Ui.ButtonVariant currentVariant = currentVariant();
         int color = color(theme);
@@ -80,7 +81,8 @@ public class UiButton extends Ui.Node {
         boolean accentHover = unselected && hoverProgress() > .5f;
         int textColor = !accentHover && unselected && enabled()
             ? theme.palette().textPrimary() : theme.palette().onAccent();
-        renderer.fillRoundRect(bounds, theme.metrics().controlRadius(), color);
+        float radius = theme.states().hoverRadius(theme.metrics().controlRadius(), hover);
+        renderer.fillRoundRect(bounds, radius, color);
         float textWidth = Math.max(0, bounds.width() - theme.metrics().padding() * 2);
         UiText displayed = UiTextMetrics.fit(renderer, text, textWidth, textScale);
         float x = bounds.x() + (bounds.width() - renderer.textWidth(displayed, textScale)) / 2;
@@ -88,11 +90,11 @@ public class UiButton extends Ui.Node {
             bounds.y() + (bounds.height() - UiTextMetrics.lineHeight(renderer, textScale)) / 2,
             textWidth, textStyle.colorOverride() == null ? textColor : textStyle.colorOverride(), textScale);
         if (currentVariant == Ui.ButtonVariant.OUTLINE || currentVariant == Ui.ButtonVariant.SECONDARY) {
-            renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(),
+            renderer.strokeRoundRect(bounds, radius,
                 theme.metrics().borderWidth(), theme.palette().border());
         }
         if (hasVisibleFocus(theme)) {
-            renderer.strokeRoundRect(bounds, theme.metrics().controlRadius(), theme.metrics().borderWidth(),
+            renderer.strokeRoundRect(bounds, radius, theme.metrics().borderWidth(),
                 blend(theme.palette().border(), theme.palette().accent(), focusProgress() * theme.states().focusStrength()));
         }
     }

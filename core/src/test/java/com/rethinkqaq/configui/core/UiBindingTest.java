@@ -298,6 +298,27 @@ class UiBindingTest {
     }
 
     @Test
+    void sliderVisualTracksTheSnappedValueImmediatelyWhileDragging() {
+        AtomicInteger value = new AtomicInteger();
+        Ui.Slider slider = Ui.slider(UiText.literal("Scale"),
+            UiBinding.of(() -> (double) value.get(), next -> value.set(next.intValue())), 0, 100, 1);
+        slider.measure(RENDERER, 100, 100, UiTheme.roseLight());
+        slider.layout(RENDERER, new UiBounds(0, 0, 100, slider.measuredHeight()), UiTheme.roseLight());
+        slider.advanceMotion(1, UiTheme.roseLight());
+
+        assertTrue(slider.click(20, 20, 0));
+        assertEquals(20, value.get());
+        assertEquals(.2f, slider.displayedRatio(), .0001f);
+
+        assertTrue(slider.drag(63, 20, 0));
+        assertEquals(63, value.get());
+        assertEquals(.63f, slider.displayedRatio(), .0001f);
+
+        slider.advanceMotion(1_000_000_001L, UiTheme.roseLight());
+        assertEquals(.63f, slider.displayedRatio(), .0001f);
+    }
+
+    @Test
     void roseThemeDoesNotDrawAFocusRingByDefault() {
         assertEquals(0, UiTheme.roseLight().palette().focusRing() >>> 24);
     }

@@ -260,24 +260,16 @@ public final class DemoScreen extends UiScreen {
 
     private static Ui.Node themesPage(AtomicReference<UiHost> host) {
         AtomicReference<UiDensity> density = new AtomicReference<>(UiDensity.NORMAL);
-        UiTheme blue = UiTheme.custom(
-            UiTheme.UiPalette.builder()
-                .background(0xFF111827).surfaceRaised(0xFF1F2937).control(0xFF374151)
-                .controlHover(0xFF4B5563).controlPressed(0xFF6B7280).controlDisabled(0xFF374151)
-                .accent(0xFF60A5FA).accentHover(0xFF93C5FD).accentPressed(0xFF3B82F6)
-                .onAccent(0xFF0F172A).textPrimary(0xFFF9FAFB).textSecondary(0xFFD1D5DB)
-                .textDisabled(0xFF9CA3AF).border(0xFF4B5563).focusRing(0xFF93C5FD)
-                .success(0xFF34D399).warning(0xFFFBBF24).danger(0xFFF87171).build(),
-            new UiTheme.UiMetrics(9, 8, 11, 34, 1));
+        UiTheme blue = UiTheme.midnightBlue();
         return Ui.column().gap(14)
             .add(Ui.label(UiText.literal("Themes provide semantic visual tokens; they do not add business logic or change layout contracts."))
                 .wrap(true))
             .add(themeSwatch("roseLight", UiTheme.roseLight()))
             .add(themeSwatch("roseDark", UiTheme.roseDark()))
-            .add(themeSwatch("custom dark blue", blue))
+            .add(themeSwatch("midnightBlue", blue))
             .add(Ui.section(UiText.literal("INTERACTIVE STATES"))
                 .add(themeStateRow("roseLight states", UiTheme.roseLight()))
-                .add(themeStateRow("dark blue states", blue))
+                .add(themeStateRow("midnightBlue states", blue))
                 .add(Ui.row().gap(8)
                     .add(Ui.button(UiText.literal("Disabled action"), () -> { }).enabled(false))
                     .add(Ui.previewCard(UiText.literal("Selected preview"),
@@ -349,13 +341,29 @@ public final class DemoScreen extends UiScreen {
     }
 
     private static Ui.Node themeSwatch(String name, UiTheme theme) {
-        return Ui.panel().padding(10)
-            .add(Ui.row().gap(8)
-                .add(Ui.badge(UiText.literal(name)).tone(UiBadge.Tone.ACCENT))
-                .add(Ui.custom().preferredWidth(42).preferredHeight(24)
-                    .render((renderer, bounds, ignored) -> renderer.fillRoundRect(bounds, 6, theme.palette().accent()))
-                    .build())
-                .add(Ui.label(UiText.literal("surface / control / accent"))));
+        UiTheme.UiPalette palette = theme.palette();
+        String[] labels = {"background", "card", "control", "accent"};
+        int[] colors = {palette.surface(), palette.surfaceRaised(), palette.control(), palette.accent()};
+        return Ui.custom().preferredHeight(68)
+            .render((renderer, bounds, ignored) -> {
+                float padding = theme.metrics().padding();
+                renderer.fillRoundRect(bounds, theme.metrics().cardRadius(), palette.surface());
+                renderer.strokeRoundRect(bounds, theme.metrics().cardRadius(), theme.metrics().borderWidth(),
+                    palette.border());
+                renderer.drawText(UiText.literal(name), bounds.x() + padding, bounds.y() + 7,
+                    palette.textPrimary());
+
+                float swatchY = bounds.y() + 34;
+                float groupWidth = Math.max(0, (bounds.width() - padding * 2) / labels.length);
+                float swatchWidth = Math.min(26, groupWidth * .32f);
+                for (int index = 0; index < labels.length; index++) {
+                    float groupX = bounds.x() + padding + groupWidth * index;
+                    renderer.fillRoundRect(new UiBounds(groupX, swatchY, swatchWidth, 17), 5, colors[index]);
+                    renderer.drawText(UiText.literal(labels[index]), groupX + swatchWidth + 6,
+                        swatchY + 4, palette.textSecondary());
+                }
+            })
+            .build();
     }
 
     private static Ui.Node templatesPage() {
