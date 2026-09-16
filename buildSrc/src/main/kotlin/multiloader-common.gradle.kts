@@ -102,7 +102,7 @@ tasks.register("printRunJava") {
 repositories {
     mavenCentral()
     // Fabric Loom may upgrade LWJGL when the Gradle JVM is Java 19+.
-    // Loom 1.15.x expects this exclusive repository to exist before its
+    // Loom 1.17.x expects this exclusive repository to exist before its
     // after-evaluation Minecraft setup runs. Register it up front so Gradle 9
     // does not reject a late content mutation of the Mojang repository.
     if (loader == null || loader == "fabric") {
@@ -160,10 +160,17 @@ repositories {
 }
 
 val resourcePackFormat = commonMod.propOrNull("resource_pack_format") ?: "15"
+val resourcePackFormatMinor = commonMod.propOrNull("resource_pack_format_minor") ?: "0"
+check(resourcePackFormat.toIntOrNull() != null && resourcePackFormat.toInt() >= 0) {
+    "resource_pack_format must be a non-negative integer for ${commonMod.mc}"
+}
+check(resourcePackFormatMinor.toIntOrNull() != null && resourcePackFormatMinor.toInt() >= 0) {
+    "resource_pack_format_minor must be a non-negative integer for ${commonMod.mc}"
+}
 val usesMinorResourcePackFormat = minecraftVersion.atLeast(26, 0) ||
     minecraftVersion.atLeast(1, 21, 11)
 val resourcePackMetadata = if (usesMinorResourcePackFormat) {
-    "\"min_format\": [$resourcePackFormat, 0],\n        \"max_format\": [$resourcePackFormat, 0]"
+    "\"min_format\": [$resourcePackFormat, $resourcePackFormatMinor],\n    \"max_format\": [$resourcePackFormat, $resourcePackFormatMinor]"
 } else {
     "\"pack_format\": $resourcePackFormat"
 }

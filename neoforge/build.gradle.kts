@@ -6,7 +6,7 @@ import org.gradle.kotlin.dsl.withGroovyBuilder
 
 plugins {
     id("multiloader-loader")
-    id("net.neoforged.moddev") version "2.0.143"
+    id("net.neoforged.moddev") version "2.0.147"
 }
 
 apply(plugin = "dev.kikugie.fletching-table.neoforge")

@@ -91,6 +91,10 @@ public final class UiHost {
         return effectiveTheme;
     }
     public Ui.Node root() { return root; }
+    //? if >=26.3 {
+    /** Returns the focused node for the 26.3 text-input bridge. */
+    Ui.Node focusedNode() { return focused; }
+    //?}
     /** Returns a laid-out tree snapshot for development diagnostics and host tooling. */
     public UiDebugSnapshot debugSnapshot() { return UiDebugSnapshot.of(root); }
     /** Enables the development Inspector overlay. Hosts own any key binding for this switch. */

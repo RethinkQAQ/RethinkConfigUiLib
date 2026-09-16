@@ -49,7 +49,7 @@ import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.client.renderer.ShaderProgram;
 import net.minecraft.resources.ResourceLocation;
 *///?}
-//? if >=1.21.6 {
+//? if >=1.21.6 && <26.3 {
 /*import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -83,7 +83,7 @@ import net.minecraft.resources.ResourceLocation;
 /*import com.mojang.blaze3d.platform.DepthTestFunction;
 import net.minecraft.resources.Identifier;
 *///?}
-//? if >=26.1 {
+//? if >=26.1 && <26.3 {
 /*import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
 import com.mojang.blaze3d.shaders.ShaderSource;
@@ -94,10 +94,26 @@ import java.io.InputStream;
 import java.util.Optional;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
-*///?} else {
+*///?} else if <26.3 {
 import net.minecraft.client.gui.GuiGraphics;
 //?}
-//? if >=26.2 {
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
+import com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BindGroupLayouts;
+import net.minecraft.resources.Identifier;
+*///?}
+//? if >=26.2 && <26.3 {
 /*import com.mojang.blaze3d.PrimitiveTopology;
 import net.minecraft.client.renderer.BindGroupLayouts;
 *///?}
@@ -296,7 +312,7 @@ final class MinecraftSdfRenderer {
     static void invalidate() { TYPES.clear(); }
     *///?}
 
-    //? if >=1.21.6 {
+    //? if >=1.21.6 && <26.3 {
     /*private static final Map<PipelineKey, RenderPipeline> PIPELINES = new HashMap<>();
     private static boolean warned;
     private static boolean unavailable;
@@ -374,7 +390,7 @@ final class MinecraftSdfRenderer {
     }
     *///?}
 
-    //? if >=26.2 {
+    //? if >=26.2 && <26.3 {
     /*static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
     static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
     private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
@@ -408,6 +424,45 @@ final class MinecraftSdfRenderer {
         } catch (IOException exception) {
             return null;
         }
+    }
+    *///?}
+
+    //? if >=26.3 {
+    /*private static final Map<PipelineKey, RenderPipeline> PIPELINES = new HashMap<>();
+    private static boolean warned;
+    private static boolean unavailable;
+    static boolean fill(GuiGraphicsExtractor graphics, UiBounds box, float radius, int color, float coordinateScale) { return draw(graphics, box, radius, 0f, color, false, coordinateScale); }
+    static boolean stroke(GuiGraphicsExtractor graphics, UiBounds box, float radius, float width, int color, float coordinateScale) { return draw(graphics, box, radius, width, color, true, coordinateScale); }
+    private static boolean draw(GuiGraphicsExtractor graphics, UiBounds box, float radius, float stroke, int color, boolean outline, float coordinateScale) {
+        if (unavailable || box.width() <= 0 || box.height() <= 0) return !unavailable;
+        try {
+            PipelineKey key = pipelineKey(radius, stroke, outline, coordinateScale);
+            RenderPipeline pipeline = PIPELINES.computeIfAbsent(key, MinecraftSdfRenderer::pipeline);
+            CompiledRenderPipeline compiled = RenderSystem.getCompiledPipelineNullable(pipeline);
+            if (compiled == null) {
+                PIPELINES.remove(key, pipeline);
+                unavailable = true;
+                warn(new IllegalStateException("RCUI SDF pipeline compilation failed"));
+                return false;
+            }
+            graphics.fill(pipeline, Math.round(box.x()), Math.round(box.y()), Math.round(box.x() + box.width()), Math.round(box.y() + box.height()), color);
+            return true;
+        } catch (RuntimeException exception) { unavailable = true; warn(exception); return false; }
+    }
+    private static void warn(Exception exception) {
+        if (!warned) { warned = true; RethinkConfigUiLib.LOGGER.warn("RCUI SDF pipeline submission failed; using the safe rounded fallback: {}", exception.toString()); }
+    }
+    private static RenderPipeline pipeline(PipelineKey key) {
+        int radius = Math.max(0, Math.min(2048, key.radius())), stroke = Math.max(0, Math.min(512, key.stroke()));
+        Identifier base = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "core/rcui_sdf_pipeline_26_3");
+        Identifier location = Identifier.fromNamespaceAndPath(RethinkConfigUiLib.MOD_ID, "pipeline/rcui_sdf_" + radius + "_" + stroke + "_" + (key.outline() ? "stroke" : "fill"));
+        return RenderPipeline.builder().withBindGroupLayout(BindGroupLayouts.PROJECTION).withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS).withLocation(location).withVertexShader(base).withFragmentShader(base).withShaderDefine("RCUI_RADIUS", radius).withShaderDefine("RCUI_STROKE", stroke).withShaderDefine("RCUI_STROKE_MODE", key.outline() ? 1 : 0).withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT)).withDepthStencilState(Optional.empty()).withCull(false).withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR).withPrimitiveTopology(PrimitiveTopology.QUADS).build();
+    }
+    static void invalidate() { PIPELINES.clear(); unavailable = false; }
+    private record PipelineKey(int radius, int stroke, boolean outline) { }
+    private static PipelineKey pipelineKey(float radius, float stroke, boolean outline, float coordinateScale) {
+        float pixelScale = (float) (Minecraft.getInstance().getWindow().getGuiScale() * coordinateScale);
+        return new PipelineKey(Math.round(radius * pixelScale), Math.round(stroke * pixelScale), outline);
     }
     *///?}
 }
