@@ -259,15 +259,21 @@ public final class UiHost {
         clearDetachedInputState();
         if (keyCode == UiKey.TAB) { moveFocus((modifiers & 1) != 0); return true; }
         UiKeyEvent event = new UiKeyEvent(keyCode, 0, modifiers);
-        // A modal owns the complete keyboard stream, including text editing. The page focus
-        // below it must never consume an event while the dialog is visible.
-        if (root instanceof UiDialogHost dialogs && dialogs.showingDialog()) return root.key(event, clipboard);
+        if (root instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
+            if (focused != null && dialogs.dialog() != null && contains(dialogs.dialog(), focused)
+                    && focused.key(event, clipboard)) return true;
+            return root.key(event, clipboard);
+        }
         return (focused != null && focused.key(event, clipboard)) || root.key(event, clipboard);
     }
     public boolean charTyped(int codePoint, int modifiers) {
         clearDetachedInputState();
         UiTextInput event = new UiTextInput(codePoint, modifiers);
-        if (root instanceof UiDialogHost dialogs && dialogs.showingDialog()) return root.textInput(event, clipboard);
+        if (root instanceof UiDialogHost dialogs && dialogs.showingDialog()) {
+            if (focused != null && dialogs.dialog() != null && contains(dialogs.dialog(), focused)
+                    && focused.textInput(event, clipboard)) return true;
+            return root.textInput(event, clipboard);
+        }
         return (focused != null && focused.textInput(event, clipboard)) || root.textInput(event, clipboard);
     }
 
